@@ -86,6 +86,15 @@
 @layer base {
   * {
     @apply border-border;
+    outline: none !important;
+  }
+
+  /* Global cleanup for focus states */
+  *:focus,
+  *:active,
+  *:focus-visible {
+    outline: none !important;
+    @apply ring-0 ring-offset-0;
   }
 
   body {
@@ -103,4 +112,16 @@
 ::-webkit-scrollbar {
   width: 0px;
   background: transparent;
+}
+
+/* GRAPH TRANSITIONS */
+.chart-bar-smooth path {
+  transition: fill 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.chart-bar-smooth path:hover {
+  fill: #0284c7 !important;
+  /* Darker Blue */
+  filter: drop-shadow(0 4px 6px rgba(2, 132, 199, 0.2));
 }

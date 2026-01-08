@@ -1,169 +1,191 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, MessageCircle, FileText, User, MapPin, Hash, Briefcase } from 'lucide-react';
+import { X, Calendar, MessageCircle, FileText, User, MapPin, Hash, Phone, Mail, Clock, CheckCircle2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { cn, getAvatarColor } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 export function PatientDrawer({ isOpen, onClose, patient }) {
-    if (!isOpen || !patient) return null;
+    // Note: We don't check !isOpen here because that is handled by AnimatePresence in the parent.
+    // We only check for patient existence.
+    if (!patient) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-[60] flex justify-end">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
+            {/* Backdrop con blur suave */}
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
                 onClick={onClose}
             />
 
-            {/* Drawer Panel */}
-            <div className="relative w-full max-w-lg h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 max-h-screen">
+            {/* Panel Principal */}
+            <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="relative w-full max-w-lg h-full bg-white shadow-2xl flex flex-col max-h-screen"
+            >
 
-                {/* 1. Header Gigante */}
-                <div className="p-8 pb-6 border-b border-slate-100 bg-slate-50/50">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="h-20 w-20 rounded-full bg-white flex items-center justify-center text-slate-700 text-3xl font-bold border-4 border-slate-100 shadow-sm">
+                {/* 1. Header Premium */}
+                <div className="relative pt-12 pb-8 px-8 bg-gradient-to-b from-slate-50 to-white border-b border-slate-100">
+
+                    {/* Botón Cerrar Flotante */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-white hover:text-slate-600 hover:shadow-md transition-all z-20"
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+
+                    <div className="flex flex-col items-center text-center">
+                        {/* Avatar Gigante */}
+                        <div className={cn(
+                            "h-24 w-24 rounded-full flex items-center justify-center text-4xl font-bold mb-4 shadow-xl ring-4 ring-white",
+                            getAvatarColor(patient.name)
+                        )}>
                             {patient.name.charAt(0)}
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-white rounded-full text-slate-400 hover:text-slate-600 transition-colors shadow-sm border border-transparent hover:border-slate-100"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
-                    </div>
 
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight leading-tight mb-2">{patient.name}</h2>
+                        {/* Nombre y Especialidad */}
+                        <h2 className="text-3xl font-bold text-slate-900 tracking-tight leading-tight mb-2">
+                            {patient.name}
+                        </h2>
 
-                    {/* Tags Médicos */}
-                    {patient.tags && (
-                        <div className="flex flex-wrap gap-2 mb-6">
-                            {patient.tags.map(tag => {
-                                // Logic for Alert Tags (e.g. Alergia)
-                                const isAlert = tag.toLowerCase().includes('alergia') || tag.toLowerCase().includes('hipertenso');
-                                return (
-                                    <span key={tag} className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${isAlert
-                                        ? 'bg-red-50 text-red-700 border-red-100'
-                                        : 'bg-slate-100 text-slate-600 border-slate-200'
-                                        }`}>
-                                        {tag}
-                                    </span>
-                                );
-                            })}
+                        {/* Tags Médicos */}
+                        {patient.tags && (
+                            <div className="flex flex-wrap gap-2 justify-center mb-6">
+                                {patient.tags.map(tag => {
+                                    const isAlert = tag.toLowerCase().includes('alergia') || tag.toLowerCase().includes('hipertenso');
+                                    return (
+                                        <span key={tag} className={cn(
+                                            "px-2.5 py-1 rounded-md text-xs font-bold border shadow-sm",
+                                            isAlert
+                                                ? "bg-red-50 text-red-700 border-red-100"
+                                                : "bg-slate-100 text-slate-600 border-slate-200"
+                                        )}>
+                                            {tag}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Botones de Acción Primaria */}
+                        <div className="flex gap-3 w-full max-w-sm">
+                            <Button className="flex-1 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 h-10 rounded-xl font-semibold transition-all hover:-translate-y-0.5">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Agendar
+                            </Button>
+                            <Button variant="outline" className="flex-1 border-slate-200 hover:bg-slate-50 text-slate-700 h-10 rounded-xl font-semibold">
+                                <FileText className="h-4 w-4 mr-2" />
+                                Editar
+                            </Button>
+                            <Button variant="outline" className="h-10 w-10 p-0 rounded-xl border-slate-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200">
+                                <MessageCircle className="h-5 w-5" />
+                            </Button>
                         </div>
-                    )}
-
-                    {/* Primary Actions (Top) */}
-                    <div className="flex gap-3 mb-6">
-                        <Button className="flex-1 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 h-10 rounded-xl font-semibold">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Agendar Turno
-                        </Button>
-                        <Button variant="outline" className="h-10 px-3 rounded-xl border-slate-200 hover:bg-slate-50 text-slate-700" title="Editar Ficha">
-                            <FileText className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="h-10 px-3 rounded-xl border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
-                            title="WhatsApp"
-                            onClick={() => window.open(`https://wa.me/${patient.contact.whatsapp_normalized}`, '_blank')}
-                        >
-                            <MessageCircle className="h-4 w-4" />
-                        </Button>
                     </div>
                 </div>
 
-                {/* Content Scrollable */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                {/* 2. Contenido Scrollable */}
+                <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-white">
 
-                    {/* Sección 1: Bio */}
-                    <section className="space-y-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <User className="h-3 w-3" /> Datos Personales
+                    {/* Sección: Datos de Contacto (Grid) */}
+                    <section>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <User className="h-3 w-3" /> Información Del Paciente
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                                 <span className="block text-xs text-slate-400 mb-1">DNI</span>
-                                <span className="block text-sm font-semibold text-slate-700">{patient.dni || '-'}</span>
+                                <span className="block text-sm font-bold text-slate-700">{patient.dni || '-'}</span>
                             </div>
-                            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
                                 <span className="block text-xs text-slate-400 mb-1">Nacimiento</span>
-                                <span className="block text-sm font-semibold text-slate-700">{patient.birthDate || '-'}</span>
+                                <span className="block text-sm font-bold text-slate-700">{patient.birthDate || '-'}</span>
                             </div>
-                            <div className="col-span-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                <span className="block text-xs text-slate-400 mb-1">Cobertura</span>
-                                <span className="block text-sm font-semibold text-slate-700 flex items-center justify-between">
-                                    {patient.insurance === 'Particular' ? (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-100 shadow-sm">
-                                            Particular
-                                        </span>
-                                    ) : (
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100 shadow-sm">
-                                            {patient.insurance}
-                                        </span>
-                                    )}
-                                </span>
+                            <div className="col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors flex items-center justify-between">
+                                <div>
+                                    <span className="block text-xs text-slate-400 mb-1">Email</span>
+                                    <span className="block text-sm font-bold text-slate-700 truncate">{patient.contact.email}</span>
+                                </div>
+                                <Mail className="h-4 w-4 text-slate-300" />
                             </div>
-                            <div className="col-span-2 flex items-center gap-3 p-1">
-                                <MapPin className="h-4 w-4 text-slate-300" />
-                                <span className="text-sm text-slate-500">Calle Falsa 123, CABA (Simulado)</span>
+                            <div className="col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors flex items-center justify-between">
+                                <div>
+                                    <span className="block text-xs text-slate-400 mb-1">Teléfono</span>
+                                    <span className="block text-sm font-bold text-slate-700">{patient.contact.phone}</span>
+                                </div>
+                                <Phone className="h-4 w-4 text-slate-300" />
                             </div>
                         </div>
                     </section>
 
-                    {/* Sección 2: Clínica / Notas */}
-                    <section className="space-y-3">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <FileText className="h-3 w-3" /> Notas Rápidas
+                    {/* Sección: Notas Clínicas (Sticky Note) */}
+                    <section>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <FileText className="h-3 w-3" /> Notas Clínicas
                         </h3>
-                        <div className="relative">
+                        <div className="relative p-6 bg-amber-50 rounded-r-2xl border-l-4 border-amber-300 shadow-sm">
                             <textarea
-                                className="w-full h-32 p-4 rounded-xl border border-slate-200 bg-amber-50/30 text-slate-700 text-sm focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none resize-none leading-relaxed"
+                                className="w-full h-24 bg-transparent border-none p-0 text-amber-900 text-sm focus:ring-0 leading-relaxed resize-none placeholder-amber-900/30"
+                                placeholder="Escribe una nota clínica relevante..."
                                 defaultValue={patient.notes}
                             />
-                            <div className="absolute bottom-2 right-2 text-[10px] text-slate-400">Autoguardado</div>
+                            <div className="absolute top-2 right-2 opacity-10">
+                                <FileText className="h-12 w-12 text-amber-900" />
+                            </div>
                         </div>
                     </section>
 
-                    {/* Sección 3: Historial (Simulado) */}
-                    <section className="space-y-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <Calendar className="h-3 w-3" /> Historial de Turnos
+                    {/* Sección: Historial (Vertical Timeline) */}
+                    <section>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <Clock className="h-3 w-3" /> Historial de Visitas
                         </h3>
-                        <div className="space-y-3">
-                            {/* Item Historial 1 */}
-                            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-lg bg-slate-100 flex flex-col items-center justify-center text-xs font-bold text-slate-600">
-                                        <span>DIC</span>
-                                        <span className="text-sm">05</span>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">Control Mensual</p>
-                                        <p className="text-xs text-slate-500">Dr. Villavicencio</p>
-                                    </div>
+
+                        <div className="relative pl-4 space-y-6 before:absolute before:left-[5px] before:top-2 before:h-full before:w-[2px] before:bg-slate-100">
+
+                            {/* Evento 1 */}
+                            <div className="relative pl-6 group">
+                                <div className="absolute left-[0px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400 ring-4 ring-emerald-50 shadow-sm transition-transform group-hover:scale-110"></div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs text-slate-400 font-mono mb-0.5">05 DIC 2023</span>
+                                    <span className="text-sm font-bold text-slate-800">Control Mensual</span>
+                                    <span className="text-xs text-slate-500 font-medium">Dr. Villavicencio</span>
                                 </div>
-                                <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 text-xs font-semibold">Realizado</span>
                             </div>
-                            {/* Item Historial 2 */}
-                            <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-white hover:border-slate-200 transition-colors">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-lg bg-slate-100 flex flex-col items-center justify-center text-xs font-bold text-slate-600">
-                                        <span>NOV</span>
-                                        <span className="text-sm">12</span>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-800">Consulta Primera Vez</p>
-                                        <p className="text-xs text-slate-500">Dr. Villavicencio</p>
-                                    </div>
+
+                            {/* Evento 2 */}
+                            <div className="relative pl-6 group">
+                                <div className="absolute left-[0px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-slate-300 ring-4 ring-slate-50 shadow-sm transition-transform group-hover:scale-110"></div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs text-slate-400 font-mono mb-0.5">12 NOV 2023</span>
+                                    <span className="text-sm font-bold text-slate-800">Consulta Primera Vez</span>
+                                    <span className="text-xs text-slate-500 font-medium">Dr. Villavicencio</span>
                                 </div>
-                                <span className="px-2 py-1 rounded-md bg-emerald-50 text-emerald-600 text-xs font-semibold">Realizado</span>
                             </div>
+
+                            {/* Evento 3 */}
+                            <div className="relative pl-6 group">
+                                <div className="absolute left-[0px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-slate-300 ring-4 ring-slate-50 shadow-sm transition-transform group-hover:scale-110"></div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs text-slate-400 font-mono mb-0.5">20 OCT 2023</span>
+                                    <span className="text-sm font-bold text-slate-800">Estudios de Laboratorio</span>
+                                    <span className="text-xs text-slate-500 font-medium">Laboratorio Central</span>
+                                </div>
+                            </div>
+
                         </div>
                     </section>
-
-
 
                 </div>
-            </div>
+            </motion.div>
         </div>,
         document.body
     );

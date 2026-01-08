@@ -19,10 +19,10 @@ const menuItems = [
     { icon: Settings, label: "Ajustes", id: "settings" },
 ];
 
-export function Sidebar({ currentPage, setCurrentPage }) {
+export function Sidebar({ currentPage, setCurrentPage, className, onClose }) {
     return (
         // CONTENEDOR FLOTANTE
-        <aside className="fixed left-4 top-4 bottom-4 w-72 flex flex-col z-50">
+        <aside className={cn("fixed left-4 top-4 bottom-4 w-72 flex flex-col z-50", className)}>
 
             {/* CÁPSULA DE VIDRIO (GLASSMORPHISM) */}
             <div className="flex-1 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-sm flex flex-col overflow-hidden relative transition-all">
@@ -52,6 +52,7 @@ export function Sidebar({ currentPage, setCurrentPage }) {
                             onClick={() => {
                                 console.log("Sidebar clicked:", item.id);
                                 setCurrentPage(item.id);
+                                if (onClose) onClose();
                             }}
                             className={cn(
                                 "group w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden text-left cursor-pointer",

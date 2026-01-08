@@ -1,60 +1,94 @@
 import React from 'react';
-import { Bot, MoreHorizontal } from "lucide-react";
+import { Sparkles, CircleDollarSign, CalendarCheck, Settings2, Activity } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function ActivityFeed({ logs }) {
 
-    // Helper to get iconography and colors based on log type
-    const getLogStyles = (type) => {
+    // Helper to map log types to clear categories and visual styles
+    const getLogConfig = (type) => {
         switch (type) {
             case 'payment':
-                return "bg-emerald-100 text-emerald-600 border-emerald-200";
+                return {
+                    label: "FINANZAS",
+                    color: "text-emerald-600",
+                    bg: "bg-emerald-50",
+                    border: "border-emerald-100",
+                    icon: CircleDollarSign
+                };
             case 'success':
-                return "bg-blue-100 text-blue-600 border-blue-200";
+                return {
+                    label: "AGENDA",
+                    color: "text-blue-600",
+                    bg: "bg-blue-50",
+                    border: "border-blue-100",
+                    icon: CalendarCheck
+                };
             case 'system':
-                return "bg-amber-100 text-amber-600 border-amber-200";
+                return {
+                    label: "SISTEMA",
+                    color: "text-amber-600",
+                    bg: "bg-amber-50",
+                    border: "border-amber-100",
+                    icon: Settings2
+                };
             default:
-                return "bg-slate-100 text-slate-600 border-slate-200";
+                return {
+                    label: "GENERAL",
+                    color: "text-slate-600",
+                    bg: "bg-slate-50",
+                    border: "border-slate-100",
+                    icon: Activity
+                };
         }
     };
 
     return (
-        <div className="rounded-[2rem] bg-white/70 backdrop-blur-md border border-white/60 shadow-sm p-6 h-full flex flex-col hover:shadow-md transition-shadow duration-300 min-h-[350px]">
+        <div className="group rounded-[2rem] bg-white/70 backdrop-blur-md border border-white/60 shadow-sm p-6 h-full flex flex-col min-h-[350px] transition-all duration-300 ease-in-out hover:-translate-y-[5px] hover:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.15)]">
 
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-                        <Bot className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-slate-800 leading-tight">Secretaria IA</h3>
-                        <p className="text-xs text-slate-500 font-medium">Actividad en tiempo real</p>
-                    </div>
+            {/* Header Redesigned */}
+            <div className="flex items-center gap-3 mb-6">
+                <div className="h-10 w-10 rounded-xl bg-violet-100 flex items-center justify-center border border-violet-200 transition-transform duration-300 ease-in-out group-hover:scale-110 group-hover:rotate-[15deg]">
+                    <Sparkles className="h-5 w-5 text-violet-600" />
                 </div>
-                <button className="text-slate-400 hover:text-slate-600 transition-colors">
-                    <MoreHorizontal className="h-5 w-5" />
-                </button>
+                <div>
+                    <h3 className="font-bold text-slate-800 text-lg leading-tight">Secretaria IA</h3>
+                    <p className="text-xs text-slate-500 font-medium">Gestionando tu consultorio</p>
+                </div>
             </div>
 
-            <div className="space-y-6 pl-2 relative flex-1 overflow-y-auto no-scrollbar pt-2">
-                {/* Connector Line */}
-                <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-slate-100 block"></div>
-
-                {logs.map((log) => {
-                    const styleClass = getLogStyles(log.type);
-                    const Icon = log.icon;
+            {/* Content List Redesigned */}
+            <div className="flex-1 flex flex-col overflow-y-auto pr-2 custom-scrollbar">
+                {logs.map((log, index) => {
+                    const config = getLogConfig(log.type);
+                    const Icon = config.icon;
+                    const isLast = index === logs.length - 1;
 
                     return (
-                        <div key={log.id} className="relative flex gap-4 items-start group">
-                            {/* Icon Node */}
-                            <div className={`relative z-10 h-10 w-10 rounded-xl border-2 border-white shadow-sm flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${styleClass}`}>
-                                {Icon && <Icon className="h-4 w-4" />}
+                        <div
+                            key={log.id}
+                            className={cn(
+                                "group relative flex items-center gap-4 p-4 transition-colors duration-200 hover:bg-slate-50 rounded-2xl cursor-default",
+                                !isLast && "border-b border-slate-100/50"
+                            )}
+                        >
+                            {/* Icon with Subtle Background */}
+                            <div className={cn("h-12 w-12 flex items-center justify-center rounded-2xl shrink-0 transition-transform group-hover:scale-105", config.bg, config.color)}>
+                                <Icon className="h-6 w-6" />
                             </div>
 
-                            <div className="pt-1">
-                                <p className="text-sm font-medium text-slate-700 leading-snug group-hover:text-primary transition-colors">
+                            {/* Content Structured - Centered */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                <p className="text-sm font-semibold text-slate-800 leading-tight group-hover:text-black transition-colors mb-0.5">
                                     {log.text}
                                 </p>
-                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-1 block">{log.time}</span>
+                                <span className="text-[11px] font-medium text-slate-400">
+                                    {log.time}
+                                </span>
+                            </div>
+
+                            {/* Chevron for affordance */}
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300">
+                                <div className="h-1.5 w-1.5 rounded-full bg-slate-300" />
                             </div>
                         </div>
                     );

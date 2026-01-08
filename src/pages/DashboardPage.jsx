@@ -6,15 +6,45 @@ import { AgendaWidget } from "@/components/dashboard/AgendaWidget";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { SourcesWidget, RetentionWidget, DemandPeaksWidget } from "@/components/dashboard/MetricsWidgets";
 import { clientConfig } from "@/config/client";
+import { motion } from "framer-motion";
 
 export function DashboardPage() {
     const { identity, business, theme, mockData } = clientConfig;
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                type: "spring",
+                damping: 25,
+                stiffness: 200
+            }
+        }
+    };
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-12 w-full max-w-[1600px] mx-auto">
+        <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8 pb-12 w-full max-w-[1600px] mx-auto will-change-transform"
+        >
 
             {/* HEADER COMPACTO */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-slate-800">
                         {identity.greeting}, <span className="text-primary">{identity.name}</span>
@@ -23,37 +53,83 @@ export function DashboardPage() {
                         Resumen operativo del consultorio.
                     </p>
                 </div>
-                <Button className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold w-full sm:w-auto">
+                <Button className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold w-full sm:w-auto transform hover:scale-105 transition-transform duration-200">
                     <Plus className="h-4 w-4 mr-2" />
                     Nuevo Turno
                 </Button>
-            </div>
+            </motion.div>
 
             {/* SECCIÓN 1: KPIS MACRO (Mobile First Grid) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {mockData.kpis.map((kpi) => (
-                    <StatCard
-                        key={kpi.id}
-                        title={kpi.title}
-                        value={kpi.isCurrency ? `${business.currency}${kpi.value}` : kpi.value}
-                        trend={kpi.trend}
-                        trendValue={kpi.trendValue}
-                        inverseTrend={kpi.inverseTrend}
-                        icon={kpi.icon}
-                        color={kpi.color}
-                    />
-                ))}
-            </div>
+            <motion.div
+                variants={itemVariants}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+            >
+                {mockData.kpis.map((kpi, index) => {
+                    // Logic to extract numeric value for animation
+                    let targetValue = 0;
+                    let suffix = "";
+                    let prefix = "";
+
+                    // If it's a currency, handle it
+                    if (kpi.isCurrency) {
+                        prefix = business.currency;
+                    }
+
+                    // Parse the raw string value (e.g., "142", "4.2%", "2.4M")
+                    const rawString = String(kpi.value);
+
+                    if (rawString.includes("%")) {
+                        targetValue = parseFloat(rawString.replace("%", ""));
+                        suffix = "%";
+                    } else if (rawString.toLowerCase().includes("m")) {
+                        targetValue = parseFloat(rawString.replace(/m/i, ""));
+                        suffix = "M";
+                    } else if (rawString.toLowerCase().includes("k")) {
+                        targetValue = parseFloat(rawString.replace(/k/i, ""));
+                        suffix = "k";
+                    } else {
+                        targetValue = parseFloat(rawString.replace(/[^0-9.]/g, ""));
+                    }
+
+                    return (
+                        <motion.div
+                            key={kpi.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                                type: "spring",
+                                damping: 25,
+                                stiffness: 200,
+                                delay: index * 0.1 // Manual stagger for cards
+                            }}
+                            whileHover={{ y: -5 }} // Subtle float effect on hover
+                        >
+                            <StatCard
+                                title={kpi.title}
+                                value={kpi.value} // Fallback / Static
+                                targetValue={isNaN(targetValue) ? 0 : targetValue}
+                                prefix={prefix}
+                                suffix={suffix}
+                                trend={kpi.trend}
+                                trendValue={kpi.trendValue}
+                                inverseTrend={kpi.inverseTrend}
+                                icon={kpi.icon}
+                                color={kpi.color}
+                            />
+                        </motion.div>
+                    );
+                })}
+            </motion.div>
 
             {/* SECCIÓN 2: DESGLOSES Y GRÁFICOS (3 Columnas en Desktop) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <SourcesWidget data={mockData.widgets.sources} />
                 <RetentionWidget data={mockData.widgets.retention} />
                 <DemandPeaksWidget data={mockData.widgets.demandPeaks} themeColor={theme.chartPrimary} />
-            </div>
+            </motion.div>
 
             {/* SECCIÓN 3: OPERATIVA (2 Columnas: Feed y Agenda) */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
+            <motion.div variants={itemVariants} className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
 
                 {/* Activity Feed */}
                 <div className="xl:col-span-1 h-full min-h-[400px]">
@@ -64,8 +140,8 @@ export function DashboardPage() {
                 <div className="xl:col-span-2 h-full min-h-[400px]">
                     <AgendaWidget appointments={mockData.appointments} />
                 </div>
-            </div>
+            </motion.div>
 
-        </div>
+        </motion.div>
     );
 }

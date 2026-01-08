@@ -1,29 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, Plus, Filter, Download, Users } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { clientConfig } from "../config/client";
 import { mockPatients } from "../data/mockPatients";
 import { PatientTable } from "../components/patients/PatientTable";
 import { PatientDrawer } from "../components/patients/PatientDrawer";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function PatientsPage() {
     // 1. Estados
     const [searchTerm, setSearchTerm] = useState("");
-    // Se podrían agregar más filtros si fuera necesario (ej: por tags)
     const [statusFilter, setStatusFilter] = useState("all");
-    // 2. Cargar datos (Simulación - Directa)
-    // Inicializamos DIRECTAMENTE con los datos importados para evitar problemas de race condition en HMR.
-    const [patients, setPatients] = useState(mockPatients);
+    const [patients] = useState(mockPatients);
 
     // Drawer states
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-
-    // Si en el futuro fetching es asíncrono, usaremos useEffect.
-    // useEffect(() => { ... }, []);
-
-    // 3. Lógica de Filtrado
+    // 2. Lógica de Filtrado
     const filteredPatients = patients.filter(patient => {
         const matchesSearch =
             patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -38,7 +31,7 @@ export function PatientsPage() {
 
     const activeCount = patients.filter(p => p.status === 'active').length;
 
-    // 4. Handlers
+    // 3. Handlers
     const handlePatientClick = (patient) => {
         setSelectedPatient(patient);
         setIsDrawerOpen(true);
@@ -49,11 +42,40 @@ export function PatientsPage() {
         setTimeout(() => setSelectedPatient(null), 300); // Wait for animation
     };
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                type: "spring",
+                damping: 25,
+                stiffness: 200
+            }
+        }
+    };
+
     return (
-        <div className="w-full max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500 pb-12">
+        <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="w-full max-w-[1600px] mx-auto space-y-8 pb-12 will-change-transform"
+        >
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
                         <Users className="h-8 w-8 text-primary" />
@@ -66,14 +88,14 @@ export function PatientsPage() {
                         </span>
                     </p>
                 </div>
-                <Button className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold">
+                <Button className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold transform hover:scale-105 transition-transform duration-200">
                     <Plus className="h-4 w-4 mr-2" />
                     Nuevo Paciente
                 </Button>
-            </div>
+            </motion.div>
 
             {/* Toolbar */}
-            <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
 
                 {/* Search */}
                 <div className="relative flex-1 w-full">
@@ -108,21 +130,27 @@ export function PatientsPage() {
                         Exportar
                     </Button>
                 </div>
-            </div>
+            </motion.div>
 
-            {/* Table */}
-            <PatientTable
-                patients={filteredPatients}
-                onPatientClick={handlePatientClick}
-            />
+            {/* TableContainer - We wrap PatientTable in a motion div to participate in stagger */}
+            <motion.div variants={itemVariants}>
+                <PatientTable
+                    patients={filteredPatients}
+                    onPatientClick={handlePatientClick}
+                />
+            </motion.div>
 
             {/* Drawer */}
-            <PatientDrawer
-                isOpen={isDrawerOpen}
-                onClose={handleCloseDrawer}
-                patient={selectedPatient}
-            />
+            <AnimatePresence>
+                {isDrawerOpen && (
+                    <PatientDrawer
+                        isOpen={isDrawerOpen}
+                        onClose={handleCloseDrawer}
+                        patient={selectedPatient}
+                    />
+                )}
+            </AnimatePresence>
 
-        </div>
+        </motion.div>
     );
 }
