@@ -1,253 +1,618 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, MessageCircle, FileText, User, MapPin, Hash, Phone, Mail, Clock, CheckCircle2, Activity, History, Pill, UploadCloud } from 'lucide-react';
+import { X, Calendar, MessageCircle, FileText, User, Phone, Mail, Clock, Activity, History, Pill, UploadCloud, Stethoscope, ArrowLeft, Download, FileIcon, Trash2, MoreHorizontal, Pencil, Eye, File as LucideFile } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn, getAvatarColor } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useScrollLock } from "@/hooks/useScrollLock";
 
-export function PatientDrawer({ isOpen, onClose, patient }) {
-    useScrollLock(!!patient); // Lock if patient exists (drawer uses patient prop existence as trigger)
-    // Note: We don't check !isOpen here because that is handled by AnimatePresence in the parent.
-    // We only check for patient existence.
+export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
+    useScrollLock(!!patient);
+    const [activeTab, setActiveTab] = useState('info');
+    const [showMenu, setShowMenu] = useState(false);
+    const [previewFile, setPreviewFile] = useState(null);
+    const menuRef = useRef(null);
+
+    // Reset tab on open
+    useEffect(() => {
+        if (patient) {
+            setActiveTab('info');
+            setShowMenu(false);
+            setPreviewFile(null);
+        }
+    }, [patient]);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setShowMenu(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     if (!patient) return null;
 
+    const formatDate = (dateString, options = { day: '2-digit', month: '2-digit', year: 'numeric' }) => {
+        if (!dateString) return '-';
+        try {
+            return new Date(dateString).toLocaleDateString('es-AR', options);
+        } catch (e) { return dateString; }
+    };
+
+    const isPreviewable = (file) => {
+        const name = file.name || file.file?.name || "";
+        const ext = name.split('.').pop().toLowerCase();
+        return ['jpg', 'jpeg', 'png', 'pdf', 'webp'].includes(ext);
+    };
+
+    const downloadFile = (fileObject) => {
+        console.log("Downloading file:", fileObject);
+        // If it's a real file object (blob)
+        if (fileObject.file) {
+            const url = URL.createObjectURL(fileObject.file);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileObject.name || "descarga";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } else {
+            // Mock download for existing mock data since we don't have real URLs
+            alert(`Simulando descarga de: ${fileObject.name}`);
+        }
+    };
+
+    const handleFileClick = (fileObject) => {
+        if (isPreviewable(fileObject)) {
+            // URL handling
+            let url = fileObject.url;
+            if (!url && fileObject.file) {
+                // Create temp url for Blob/File
+                url = URL.createObjectURL(fileObject.file);
+            }
+
+            if (url) {
+                setPreviewFile({ ...fileObject, tempUrl: url });
+            } else {
+                console.warn("No valid URL for preview");
+            }
+        } else {
+            downloadFile(fileObject);
+        }
+    };
+
+    const closePreview = () => {
+        setPreviewFile(null);
+    };
+
+    // Sort history by date descending if it exists
+    const safeHistory = (patient.history || []).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // If no explicit history, creating a derived one for display compatibility with legacy data
+    const displayHistory = safeHistory.length > 0 ? safeHistory : [
+        ...(patient.last_visit ? [{
+            date: patient.last_visit,
+            title: 'Última Visita Registrada',
+            doctor: 'Dr. Villavicencio',
+            type: 'Consulta',
+            notes: patient.notes || 'Control de rutina.'
+        }] : []),
+        {
+            date: patient.createdAt || '2023-01-01',
+            title: 'Alta de Paciente',
+            doctor: 'Sistema',
+            type: 'Administrativo',
+            notes: 'Creación de ficha médica digital.'
+        }
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+
     return createPortal(
-        <div className="fixed inset-0 z-[60] flex justify-end">
-            {/* Backdrop con blur suave */}
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"
-                onClick={onClose}
-            />
+        <AnimatePresence mode="wait">
+            {isOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
 
-            {/* Panel Principal */}
-            <motion.div
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="relative w-full max-w-lg h-full bg-gradient-to-b from-slate-50/90 via-indigo-50/90 to-slate-50/90 backdrop-blur-xl shadow-2xl flex flex-col max-h-screen border-l border-white/20"
-            >
-
-                {/* 1. Header Premium */}
-                <div className="relative pt-12 pb-8 px-8 bg-white/90 backdrop-blur-md border-b border-indigo-100/50">
-
-                    {/* Botón Cerrar Flotante */}
-                    <button
+                    {/* Backdrop */}
+                    <motion.div
+                        key="backdrop"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
                         onClick={onClose}
-                        className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:bg-white hover:text-slate-600 hover:shadow-md transition-all z-20"
+                        className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm dark:bg-slate-950/40"
+                    />
+
+                    {/* Modal Content */}
+                    <motion.div
+                        key="modal-content"
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 25 }}
+                        className="relative w-full max-w-5xl h-[75vh] min-h-[600px] flex md:flex-row flex-col bg-white rounded-3xl shadow-2xl overflow-hidden ring-1 ring-black/5"
                     >
-                        <X className="h-5 w-5" />
-                    </button>
 
-                    <div className="flex flex-col items-center text-center">
-                        {/* Avatar Gigante */}
-                        <div className={cn(
-                            "h-24 w-24 rounded-full flex items-center justify-center text-4xl font-bold mb-4 shadow-xl ring-4 ring-white",
-                            getAvatarColor(patient.name)
-                        )}>
-                            {patient.name.charAt(0)}
-                        </div>
+                        {/* Sidebar (Left) */}
+                        <div className="w-full md:w-[280px] bg-slate-50/60 border-r border-slate-100 flex flex-col shrink-0 relative overflow-hidden backdrop-blur-3xl">
 
-                        {/* Nombre y Especialidad */}
-                        <h2 className="text-3xl font-bold text-slate-900 tracking-tight leading-tight mb-2">
-                            {patient.name}
-                        </h2>
+                            {/* Decorative Elements */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/80 to-slate-50/50"></div>
 
-                        {/* Tags Médicos */}
-                        {patient.tags && (
-                            <div className="flex flex-wrap gap-2 justify-center mb-6">
-                                {patient.tags.map(tag => {
-                                    const isAlert = tag.toLowerCase().includes('alergia') || tag.toLowerCase().includes('hipertenso');
-                                    return (
-                                        <span key={tag} className={cn(
-                                            "px-2.5 py-1 rounded-md text-xs font-bold border shadow-sm",
-                                            isAlert
-                                                ? "bg-red-50 text-red-700 border-red-100"
-                                                : "bg-slate-100 text-slate-600 border-slate-200"
-                                        )}>
-                                            {tag}
-                                        </span>
-                                    );
-                                })}
+                            {/* Header / Profile Summary */}
+                            <div className="p-6 relative z-10 flex flex-col items-center text-center">
+                                <motion.div
+                                    whileHover={{ scale: 1.05 }}
+                                    className={cn(
+                                        "h-24 w-24 rounded-full flex items-center justify-center text-3xl font-bold mb-4 shadow-xl ring-4 ring-white text-white bg-primary",
+                                    )}
+                                >
+                                    {patient.name.charAt(0)}
+                                </motion.div>
+                                <h2 className="text-xl font-bold text-slate-800 leading-tight mb-1">{patient.name}</h2>
+                                <p className="text-xs text-slate-500 font-medium bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm truncate max-w-full mt-2">
+                                    {patient.contact?.email || 'Sin email'}
+                                </p>
                             </div>
-                        )}
 
-                        {/* Botones de Acción Primaria */}
-                        <div className="flex gap-3 w-full max-w-sm">
-                            <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20 h-10 rounded-xl font-semibold transition-all hover:-translate-y-0.5">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Agendar
-                            </Button>
-                            <Button variant="outline" className="flex-1 border-slate-200 hover:bg-slate-50 text-slate-700 h-10 rounded-xl font-semibold">
-                                <FileText className="h-4 w-4 mr-2" />
-                                Editar
-                            </Button>
-                            <Button variant="outline" className="h-10 w-10 p-0 rounded-xl border-slate-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200">
-                                <MessageCircle className="h-5 w-5" />
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* 2. Contenido Scrollable */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide">
-
-                    {/* Sección: Datos de Contacto (Grid) */}
-                    <section>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <User className="h-3 w-3" /> Información Del Paciente
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 rounded-2xl bg-white/70 border border-white/50 hover:border-indigo-200/50 transition-colors backdrop-blur-sm shadow-sm">
-                                <span className="block text-xs text-slate-400 mb-1">DNI</span>
-                                <span className="block text-sm font-bold text-slate-700">{patient.dni || '-'}</span>
+                            {/* Navigation */}
+                            <div className="px-4 py-2 space-y-1 flex-1 flex flex-col relative z-20 overflow-y-auto custom-scrollbar">
+                                <LayoutGroup id="patient-drawer-nav">
+                                    {[
+                                        { id: 'info', label: 'General', icon: User },
+                                        { id: 'medical', label: 'Ficha Clínica', icon: Stethoscope },
+                                        { id: 'history', label: 'Historial', icon: History },
+                                        { id: 'files', label: 'Archivos', icon: UploadCloud }
+                                    ].map((tab) => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`relative w-full text-left px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all duration-300 ease-out flex items-center gap-3 outline-none group ${activeTab === tab.id ? 'text-primary' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            {activeTab === tab.id && (
+                                                <motion.div
+                                                    layoutId="activeTabBg"
+                                                    className="absolute inset-0 bg-white shadow-sm border border-slate-100 rounded-xl"
+                                                    initial={false}
+                                                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                                />
+                                            )}
+                                            <tab.icon className={`h-4 w-4 relative z-10 transition-transform duration-300 group-hover:scale-110 ${activeTab === tab.id ? 'text-primary' : 'text-slate-400'}`} />
+                                            <span className="relative z-10">{tab.label}</span>
+                                        </button>
+                                    ))}
+                                </LayoutGroup>
                             </div>
-                            <div className="p-4 rounded-2xl bg-white/70 border border-white/50 hover:border-indigo-200/50 transition-colors backdrop-blur-sm shadow-sm">
-                                <span className="block text-xs text-slate-400 mb-1">Nacimiento</span>
-                                <span className="block text-sm font-bold text-slate-700">{patient.birthDate || '-'}</span>
-                            </div>
-                            <div className="col-span-2 p-4 rounded-2xl bg-white/70 border border-white/50 hover:border-indigo-200/50 transition-colors flex items-center justify-between backdrop-blur-sm shadow-sm">
-                                <div>
-                                    <span className="block text-xs text-slate-400 mb-1">Email</span>
-                                    <span className="block text-sm font-bold text-slate-700 truncate">{patient.contact.email}</span>
-                                </div>
-                                <Mail className="h-4 w-4 text-slate-300" />
-                            </div>
-                            <div className="col-span-2 p-4 rounded-2xl bg-white/70 border border-white/50 hover:border-indigo-200/50 transition-colors flex items-center justify-between backdrop-blur-sm shadow-sm">
-                                <div>
-                                    <span className="block text-xs text-slate-400 mb-1">Teléfono</span>
-                                    <span className="block text-sm font-bold text-slate-700">{patient.contact.phone}</span>
-                                </div>
-                                <Phone className="h-4 w-4 text-slate-300" />
-                            </div>
-                        </div>
-                    </section>
 
+                            {/* Sidebar Footer Actions */}
+                            <div className="p-4 bg-white/50 backdrop-blur-sm border-t border-slate-100 relative z-30 flex flex-col gap-3">
+                                <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 rounded-xl font-bold text-xs h-11 transition-all duration-300 active:scale-95 group border border-transparent">
+                                    <Calendar className="h-4 w-4 mr-2 group-hover:animate-pulse text-white/90" />
+                                    Agendar Turno
+                                </Button>
 
-                    {/* Sección: Ficha Médica (Nuevo) */}
-                    {patient.medicalHistory && (
-                        <section>
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <Activity className="h-3 w-3" /> Ficha Médica
-                            </h3>
-                            <div className="bg-white/70 border border-white/50 rounded-2xl p-5 space-y-4 backdrop-blur-sm shadow-sm">
-                                <div>
-                                    <span className="text-xs text-slate-400 mb-1 block flex items-center gap-1"><History className="h-3 w-3" /> Antecedentes Patológicos</span>
-                                    <p className="text-sm font-medium text-slate-700 leading-relaxed">
-                                        {patient.medicalHistory.pathological || "Sin antecedentes registrados."}
-                                    </p>
-                                </div>
-                                <div className="w-full h-px bg-indigo-50" />
-                                <div>
-                                    <span className="text-xs text-slate-400 mb-1 block flex items-center gap-1"><FileText className="h-3 w-3" /> Motivo Actual</span>
-                                    <p className="text-sm font-medium text-slate-700 leading-relaxed">
-                                        {patient.medicalHistory.currentIllness || "No especificado."}
-                                    </p>
-                                </div>
-                                <div className="w-full h-px bg-indigo-50" />
-                                <div>
-                                    <span className="text-xs text-slate-400 mb-1 block flex items-center gap-1"><Pill className="h-3 w-3" /> Medicación Actual</span>
-                                    <div className="flex gap-2 mt-1">
-                                        {patient.medicalHistory.medication ? (
-                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-semibold">
-                                                {patient.medicalHistory.medication}
-                                            </span>
-                                        ) : (
-                                            <span className="text-sm text-slate-400 italic">Niega medicación.</span>
-                                        )}
+                                <div className="flex items-center gap-2">
+                                    <Button variant="outline" className="flex-1 h-10 text-xs font-bold border-slate-200 text-slate-600 bg-white hover:bg-slate-50 hover:border-slate-300 transition-all duration-300 shadow-sm">
+                                        <MessageCircle className="h-4 w-4 mr-2 text-emerald-500" />
+                                        WhatsApp
+                                    </Button>
+
+                                    {/* More Options Menu Toggle */}
+                                    <div className="relative" ref={menuRef}>
+                                        <button
+                                            onClick={() => setShowMenu(!showMenu)}
+                                            className={cn(
+                                                "h-10 w-10 flex items-center justify-center rounded-xl border transition-all duration-300",
+                                                showMenu
+                                                    ? "bg-slate-100 text-slate-900 border-slate-300 scale-95"
+                                                    : "bg-white text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-600 hover:bg-slate-50"
+                                            )}
+                                        >
+                                            <MoreHorizontal className="h-5 w-5" />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {showMenu && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    transition={{ duration: 0.2, ease: "easeOut" }}
+                                                    className="absolute bottom-[calc(100%+8px)] right-0 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-1.5 origin-bottom-right z-50 ring-1 ring-slate-900/5"
+                                                >
+                                                    <div className="flex flex-col gap-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                if (onEdit) onEdit(patient);
+                                                            }}
+                                                            className="w-full flex items-center gap-3 px-3 py-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-primary rounded-xl transition-all group"
+                                                        >
+                                                            <div className="p-2 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                                                <Pencil className="h-4 w-4" />
+                                                            </div>
+                                                            <div className="text-left">
+                                                                <span className="block text-slate-700 group-hover:text-primary">Editar Perfil</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal">Modificar datos</span>
+                                                            </div>
+                                                        </button>
+
+                                                        <div className="h-px bg-slate-50 my-1 mx-2" />
+
+                                                        <button onClick={() => { }} className="w-full flex items-center gap-3 px-3 py-3 text-xs font-semibold text-slate-600 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all group">
+                                                            <div className="p-2 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-red-100 group-hover:text-red-500 transition-colors">
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </div>
+                                                            <div className="text-left">
+                                                                <span className="block text-slate-700 group-hover:text-red-700">Eliminar</span>
+                                                                <span className="text-[10px] text-slate-400 font-normal">Acción irreversible</span>
+                                                            </div>
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                {/* Archivos Adjuntos */}
-                                {patient.medicalHistory.files && patient.medicalHistory.files.length > 0 && (
-                                    <>
-                                        <div className="w-full h-px bg-indigo-50" />
-                                        <div>
-                                            <span className="text-xs text-slate-400 mb-2 block flex items-center gap-1"><UploadCloud className="h-3 w-3" /> Adjuntos</span>
-                                            <div className="grid gap-2">
-                                                {patient.medicalHistory.files.map((f, idx) => (
-                                                    <div key={idx} className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg shadow-sm">
-                                                        <div className="h-8 w-8 bg-indigo-50 text-indigo-600 rounded-md flex items-center justify-center">
-                                                            <FileText className="h-4 w-4" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-xs font-bold text-slate-700 truncate">{f.file?.name || "Archivo Adjunto"}</p>
-                                                            <p className="text-[10px] text-slate-400">{f.note || "Sin notas"}</p>
+                        {/* Content Area (Right) */}
+                        <div className="flex-1 flex flex-col h-full bg-white relative min-w-0">
+
+                            {/* Close Button */}
+                            <button
+                                onClick={onClose}
+                                className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-50 text-slate-300 hover:text-slate-500 transition-all duration-300 z-20 group"
+                            >
+                                <X className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+                            </button>
+
+                            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 lg:p-10">
+                                <AnimatePresence mode="wait">
+                                    {/* TAB: INFO */}
+                                    {activeTab === 'info' && (
+                                        <motion.div
+                                            key="info"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="space-y-10"
+                                        >
+                                            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                                                <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center">
+                                                    <User className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Información Personal</h3>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-8">
+                                                <div className="space-y-2 group">
+                                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide group-hover:text-primary transition-colors">Documento</span>
+                                                    <p className="text-lg font-semibold text-slate-700">{patient.dni || '-'}</p>
+                                                </div>
+                                                <div className="space-y-2 group">
+                                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide group-hover:text-primary transition-colors">Nacimiento</span>
+                                                    <p className="text-lg font-semibold text-slate-700">{patient.birthDate || '-'}</p>
+                                                </div>
+                                                <div className="space-y-2 group">
+                                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide group-hover:text-primary transition-colors">Email</span>
+                                                    <div className="flex items-center gap-2 text-slate-700">
+                                                        <Mail className="h-4 w-4 text-slate-300" />
+                                                        <p className="text-lg font-semibold truncate">{patient.contact?.email || '-'}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2 group">
+                                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide group-hover:text-primary transition-colors">Teléfono</span>
+                                                    <div className="flex items-center gap-2 text-slate-700">
+                                                        <Phone className="h-4 w-4 text-slate-300" />
+                                                        <p className="text-lg font-semibold">{patient.contact?.phone || '-'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-3 pb-2 border-b border-slate-100">
+                                                    <div className="h-8 w-8 rounded-full bg-amber-50 flex items-center justify-center">
+                                                        <FileText className="h-4 w-4 text-amber-500" />
+                                                    </div>
+                                                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Notas</h3>
+                                                </div>
+                                                <div className="bg-amber-50/30 rounded-2xl p-6 border border-amber-100/50 hover:border-amber-200 transition-colors duration-300">
+                                                    <p className="text-sm text-slate-600 leading-relaxed font-medium">{patient.notes || "No hay notas registradas."}</p>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+
+                                    {/* TAB: MEDICAL */}
+                                    {activeTab === 'medical' && (
+                                        <motion.div
+                                            key="medical"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="space-y-10"
+                                        >
+                                            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                                                <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center">
+                                                    <Activity className="h-4 w-4 text-emerald-600" />
+                                                </div>
+                                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Ficha Clínica</h3>
+                                            </div>
+
+                                            <div className="space-y-6">
+                                                <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 hover:border-slate-200 transition-all duration-300">
+                                                    <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                                                        <Activity className="h-3.5 w-3.5" /> Motivo de Consulta
+                                                    </h4>
+                                                    <p className="text-base font-medium text-slate-700 leading-relaxed">
+                                                        {patient.medicalHistory?.currentIllness || "Sin registro actual."}
+                                                    </p>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
+                                                        <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                                                            <History className="h-3.5 w-3.5" /> Antecedentes
+                                                        </h4>
+                                                        <p className="text-sm text-slate-600 leading-relaxed">
+                                                            {patient.medicalHistory?.pathological || "Sin antecedentes relevados."}
+                                                        </p>
+                                                    </div>
+                                                    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300">
+                                                        <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                                                            <Pill className="h-3.5 w-3.5" /> Medicación
+                                                        </h4>
+                                                        <p className="text-sm text-slate-600 leading-relaxed">
+                                                            {patient.medicalHistory?.medication || "Niega medicación habitual."}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+
+                                    {/* TAB: HISTORY */}
+                                    {activeTab === 'history' && (
+                                        <motion.div
+                                            key="history"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="space-y-8"
+                                        >
+                                            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                                                <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center">
+                                                    <Clock className="h-4 w-4 text-primary" />
+                                                </div>
+                                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Historial de Visitas</h3>
+                                            </div>
+
+                                            <div className="relative pl-6 space-y-8 before:absolute before:left-[19px] before:top-2 before:h-full before:w-[2px] before:bg-slate-100 before:rounded-full">
+                                                {displayHistory.map((event, idx) => (
+                                                    <div key={idx} className="relative pl-8 group">
+                                                        {/* Dot */}
+                                                        <div className={cn(
+                                                            "absolute left-[2px] top-2 h-3.5 w-3.5 rounded-full border-[3px] border-white ring-1 shadow-sm z-10 transition-all duration-300",
+                                                            "ring-slate-100 bg-slate-200 group-hover:bg-primary group-hover:scale-110"
+                                                        )}></div>
+
+                                                        {/* Card */}
+                                                        <div className="flex flex-col bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-300">
+
+                                                            {/* Header Line */}
+                                                            <div className="flex justify-between items-start mb-3">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{formatDate(event.date, { weekday: 'long' })}</span>
+                                                                        <span className="text-xs text-slate-300">•</span>
+                                                                        <span className="text-xs font-bold text-slate-500">{formatDate(event.date)}</span>
+                                                                    </div>
+                                                                    <h4 className="text-base font-bold text-slate-800">{event.title}</h4>
+                                                                </div>
+                                                                <span className={cn(
+                                                                    "text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide",
+                                                                    event.type === 'Consulta' ? "bg-indigo-50 text-indigo-600" :
+                                                                        event.type === 'Urgencia' ? "bg-red-50 text-red-600" :
+                                                                            "bg-slate-100 text-slate-600"
+                                                                )}>
+                                                                    {event.type}
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Doctor info */}
+                                                            <div className="flex items-center gap-2 text-xs text-slate-500 mb-3 bg-slate-50 p-2 rounded-lg w-fit">
+                                                                <User className="h-3.5 w-3.5 text-primary/70" />
+                                                                <span className="font-semibold">{event.doctor}</span>
+                                                            </div>
+
+                                                            {/* Notes if available */}
+                                                            {event.notes && (
+                                                                <div className="text-sm text-slate-600 leading-relaxed border-t border-slate-50 pt-2">
+                                                                    {event.notes}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
+                                        </motion.div>
+                                    )}
+
+                                    {/* TAB: FILES */}
+                                    {activeTab === 'files' && (
+                                        <motion.div
+                                            key="files"
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -10 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="space-y-8"
+                                        >
+                                            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                                                <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
+                                                    <UploadCloud className="h-4 w-4 text-blue-600" />
+                                                </div>
+                                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Archivos</h3>
+                                            </div>
+
+                                            {patient.medicalHistory?.files && patient.medicalHistory.files.length > 0 ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {patient.medicalHistory.files.map((file, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            onClick={() => handleFileClick(file)}
+                                                            className="group flex items-start gap-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-100 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                                                        >
+                                                            <div className="h-12 w-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                                                <LucideFile className="h-6 w-6" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 py-0.5">
+                                                                <p className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{file.file?.name || file.name || "Documento"}</p>
+                                                                <p className="text-xs text-slate-400 mt-1 line-clamp-1">{file.note || "Sin notas"}</p>
+                                                                <div className="flex items-center gap-2 mt-2">
+                                                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-blue-50/50 transition-colors">
+                                                                        {formatDate(file.date || new Date().toISOString())}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100">
+                                                                {isPreviewable(file) ? <Eye className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center h-40 bg-slate-50 rounded-2xl border border-slate-100">
+                                                    <LucideFile className="h-10 w-10 text-slate-300 mb-2 opacity-50" />
+                                                    <p className="text-sm text-slate-500 font-medium">No hay archivos adjuntos</p>
+                                                </div>
+                                            )}
+                                        </motion.div>
+                                    )}
+
+                                </AnimatePresence>
+                            </div>
+                        </div>
+
+                        {/* File Preview Modal (Overlay) */}
+                        <AnimatePresence>
+                            {previewFile && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 z-50 bg-slate-900/5 backdrop-blur-sm flex items-center justify-center bg-white"
+                                >
+                                    <div className="absolute inset-0 bg-white flex flex-col md:flex-row">
+
+                                        {/* Left: Preview Area */}
+                                        <div className="flex-1 bg-slate-50 relative flex items-center justify-center p-6 border-r border-slate-200 overflow-hidden">
+                                            {/* Top Bar Floating for Mobile Close */}
+                                            <button
+                                                onClick={closePreview}
+                                                className="absolute top-4 left-4 p-2 rounded-full bg-white/80 hover:bg-white text-slate-500 hover:text-slate-700 shadow-sm border border-slate-200 md:hidden z-10"
+                                            >
+                                                <ArrowLeft className="h-5 w-5" />
+                                            </button>
+
+                                            {previewFile.tempUrl && previewFile.name?.toLowerCase().endsWith('.pdf') ? (
+                                                <iframe src={previewFile.tempUrl} className="w-full h-full rounded-xl border border-slate-200 shadow-sm bg-white" title="Preview" />
+                                            ) : (
+                                                <motion.img
+                                                    initial={{ opacity: 0, scale: 0.95 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    src={previewFile.tempUrl}
+                                                    alt="Preview"
+                                                    className="max-w-full max-h-full object-contain rounded-lg shadow-md"
+                                                />
+                                            )}
                                         </div>
-                                    </>
-                                )}
 
-                            </div>
-                        </section>
-                    )}
+                                        {/* Right: Sidebar Info */}
+                                        <div className="w-full md:w-[320px] bg-white flex flex-col shrink-0 h-full relative z-20 shadow-[-10px_0_30px_-10px_rgba(0,0,0,0.05)]">
 
-                    {/* Sección: Notas Clínicas (Sticky Note) */}
-                    <section>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <FileText className="h-3 w-3" /> Notas Clínicas
-                        </h3>
-                        <div className="relative p-6 bg-amber-50 rounded-r-2xl border-l-4 border-amber-300 shadow-sm">
-                            <textarea
-                                className="w-full h-24 bg-transparent border-none p-0 text-amber-900 text-sm focus:ring-0 leading-relaxed resize-none placeholder-amber-900/30"
-                                placeholder="Escribe una nota clínica relevante..."
-                                defaultValue={patient.notes}
-                            />
-                        </div>
-                    </section>
+                                            {/* Header */}
+                                            <div className="p-5 border-b border-slate-100 flex items-start justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-primary shrink-0">
+                                                        <FileText className="h-5 w-5" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h3 className="font-bold text-slate-800 text-sm truncate leading-tight pr-2">{previewFile.name || previewFile.file?.name}</h3>
+                                                        <p className="text-[11px] font-bold text-slate-400 uppercase mt-0.5">{previewFile.name?.split('.').pop() || 'Archivo'}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={closePreview}
+                                                    className="p-1.5 -mr-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
+                                                >
+                                                    <X className="h-5 w-5" />
+                                                </button>
+                                            </div>
 
-                    {/* Sección: Historial (Vertical Timeline) */}
-                    <section>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <Clock className="h-3 w-3" /> Historial de Visitas
-                        </h3>
+                                            {/* Content Scrollable */}
+                                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
-                        <div className="relative pl-4 space-y-6 before:absolute before:left-[5px] before:top-2 before:h-full before:w-[2px] before:bg-indigo-50">
+                                                {/* Date Info */}
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                        <Clock className="h-3 w-3" /> Fecha de carga
+                                                    </label>
+                                                    <p className="text-sm font-semibold text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                        {new Date(previewFile.date).toLocaleString('es-AR', { dateStyle: 'long', timeStyle: 'short' })}
+                                                    </p>
+                                                </div>
 
-                            {/* Evento 1 */}
-                            <div className="relative pl-6 group">
-                                <div className="absolute left-[0px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400 ring-4 ring-emerald-50 shadow-sm transition-transform group-hover:scale-110"></div>
-                                <div className="flex flex-col">
-                                    <span className="text-xs text-slate-400 font-mono mb-0.5">05 DIC 2023</span>
-                                    <span className="text-sm font-bold text-slate-800">Control Mensual</span>
-                                    <span className="text-xs text-slate-500 font-medium">Dr. Villavicencio</span>
-                                </div>
-                            </div>
+                                                {/* Notes Section with visual prominence */}
+                                                <div className="space-y-3">
+                                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                                        <MessageCircle className="h-3 w-3" /> Notas del Archivo
+                                                    </label>
+                                                    <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100/50 min-h-[120px] relative">
+                                                        {previewFile.note ? (
+                                                            <p className="text-sm text-slate-600 leading-relaxed font-medium italic">
+                                                                "{previewFile.note}"
+                                                            </p>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 py-4">
+                                                                <MessageCircle className="h-5 w-5 opacity-50" />
+                                                                <span className="text-xs font-medium">Sin notas adjuntas</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
 
-                            {/* Evento 2 */}
-                            <div className="relative pl-6 group">
-                                <div className="absolute left-[0px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-slate-300 ring-4 ring-slate-50 shadow-sm transition-transform group-hover:scale-110"></div>
-                                <div className="flex flex-col">
-                                    <span className="text-xs text-slate-400 font-mono mb-0.5">12 NOV 2023</span>
-                                    <span className="text-sm font-bold text-slate-800">Consulta Primera Vez</span>
-                                    <span className="text-xs text-slate-500 font-medium">Dr. Villavicencio</span>
-                                </div>
-                            </div>
+                                            </div>
 
-                            {/* Evento 3 */}
-                            <div className="relative pl-6 group">
-                                <div className="absolute left-[0px] top-1.5 h-3 w-3 rounded-full border-2 border-white bg-slate-300 ring-4 ring-slate-50 shadow-sm transition-transform group-hover:scale-110"></div>
-                                <div className="flex flex-col">
-                                    <span className="text-xs text-slate-400 font-mono mb-0.5">20 OCT 2023</span>
-                                    <span className="text-sm font-bold text-slate-800">Estudios de Laboratorio</span>
-                                    <span className="text-xs text-slate-500 font-medium">Laboratorio Central</span>
-                                </div>
-                            </div>
+                                            {/* Footer Actions */}
+                                            <div className="p-5 border-t border-slate-100 bg-slate-50/30">
+                                                <Button
+                                                    onClick={() => downloadFile(previewFile)}
+                                                    className="w-full bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/10 rounded-xl h-11 transition-all duration-300"
+                                                >
+                                                    <Download className="h-4 w-4 mr-2" />
+                                                    Descargar Original
+                                                </Button>
+                                            </div>
 
-                        </div>
-                    </section>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
+                    </motion.div>
                 </div>
-            </motion.div>
-        </div>,
+            )}
+        </AnimatePresence>,
         document.body
     );
 }

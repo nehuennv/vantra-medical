@@ -53,7 +53,7 @@ const PatientRow = React.memo(({ patient, onClick }) => {
                         {patient.dni || '-'}
                     </p>
                     <p className="text-[10px] text-slate-400 font-medium mt-0.5 uppercase tracking-wide">
-                        {calculateAge(patient.birthDate)} años
+                        {calculateAge(patient.birthDate)} AÑOS
                     </p>
                 </div>
             </td>
@@ -87,7 +87,7 @@ const PatientRow = React.memo(({ patient, onClick }) => {
                 )}
             </td>
 
-            {/* Próximo Turno */}
+            {/* Próximo Turno - Consistent Format */}
             <td className="px-6 py-4 pr-8 text-right">
                 <div className="flex flex-col items-end">
                     {patient.next_appointment ? (

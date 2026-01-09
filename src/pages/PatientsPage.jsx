@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Download, Users, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, Filter, Download, Users, SlidersHorizontal } from 'lucide-react';
 import { CreatePatientModal } from "@/components/patients/CreatePatientModal";
 import { Button } from "@/components/ui/button";
 import { mockPatients } from "../data/mockPatients";
@@ -15,10 +15,11 @@ export function PatientsPage() {
 
     // Modal State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [patientToEdit, setPatientToEdit] = useState(null);
 
     // Pagination & Sorting State
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(8); // Keeping list short for performance
+    const [itemsPerPage] = useState(8);
     const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
     const [isLoading, setIsLoading] = useState(false);
 
@@ -26,7 +27,6 @@ export function PatientsPage() {
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    // 2. Lógica de Filtrado
     // 2. Lógica de Filtrado, Ordenamiento y Paginación
     const processedPatients = React.useMemo(() => {
         let result = [...patients];
@@ -56,9 +56,6 @@ export function PatientsPage() {
                 let aValue = a[sortConfig.key];
                 let bValue = b[sortConfig.key];
 
-                // Handle nested keys manually if needed, or keeping it simple for now
-                // For this mock, keys are top level mostly, except maybe 'contact' but user asked for Name sorting mainly.
-
                 if (typeof aValue === 'string') aValue = aValue.toLowerCase();
                 if (typeof bValue === 'string') bValue = bValue.toLowerCase();
 
@@ -79,7 +76,7 @@ export function PatientsPage() {
     // Efecto de carga simulada al cambiar filtros o página
     React.useEffect(() => {
         setIsLoading(true);
-        const timer = setTimeout(() => setIsLoading(false), 300); // Small 300ms fake load to feel "processed"
+        const timer = setTimeout(() => setIsLoading(false), 300);
         return () => clearTimeout(timer);
     }, [searchTerm, currentPage, sortConfig]);
 
@@ -90,7 +87,6 @@ export function PatientsPage() {
 
     const activeCount = patients.filter(p => p.status === 'active').length;
 
-    // 3. Handlers
     // 3. Handlers
     const handleSort = (key) => {
         setSortConfig(current => ({
@@ -106,35 +102,41 @@ export function PatientsPage() {
 
     const handleCloseDrawer = () => {
         setIsDrawerOpen(false);
-        setTimeout(() => setSelectedPatient(null), 300); // Wait for animation
+        setTimeout(() => setSelectedPatient(null), 300);
+    };
+
+    const handleEditPatient = (patient) => {
+        // Close drawer first
+        setIsDrawerOpen(false);
+        // Set patient to edit and open modal
+        setPatientToEdit(patient);
+        setTimeout(() => setIsCreateModalOpen(true), 150);
+    };
+
+    const handleCloseCreateModal = () => {
+        setIsCreateModalOpen(false);
+        // Clean edit state after animation
+        setTimeout(() => setPatientToEdit(null), 300);
     };
 
     const handleCreatePatient = (newPatient) => {
-        setPatients(prev => [newPatient, ...prev]);
+        if (patientToEdit) {
+            // Update existant
+            setPatients(prev => prev.map(p => p.id === newPatient.id ? newPatient : p));
+        } else {
+            // Create new
+            setPatients(prev => [newPatient, ...prev]);
+        }
     };
 
     const containerVariants = {
         hidden: { opacity: 0 },
-        visible: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1,
-                delayChildren: 0.1
-            }
-        }
+        visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } }
     };
 
     const itemVariants = {
         hidden: { opacity: 0, y: 20 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            transition: {
-                type: "spring",
-                damping: 25,
-                stiffness: 200
-            }
-        }
+        visible: { opacity: 1, y: 0, transition: { type: "spring", damping: 25, stiffness: 200 } }
     };
 
     return (
@@ -170,8 +172,6 @@ export function PatientsPage() {
 
             {/* Toolbar */}
             <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-
-                {/* Search */}
                 <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input
@@ -182,11 +182,7 @@ export function PatientsPage() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-
-                {/* Filters */}
                 <div className="flex flex-wrap gap-3 w-full md:w-auto items-center">
-
-                    {/* Insurance Filter */}
                     <div className="relative group w-full md:w-auto">
                         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
                             <Filter className="h-4 w-4" />
@@ -238,13 +234,15 @@ export function PatientsPage() {
                         isOpen={isDrawerOpen}
                         onClose={handleCloseDrawer}
                         patient={selectedPatient}
+                        onEdit={handleEditPatient}
                     />
                 )}
             </AnimatePresence>
 
             <CreatePatientModal
                 isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
+                initialData={patientToEdit}
+                onClose={handleCloseCreateModal}
                 onSubmit={handleCreatePatient}
             />
 
