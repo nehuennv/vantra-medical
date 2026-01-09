@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { clientConfig } from "@/config/client";
 
 const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
@@ -19,10 +20,11 @@ const menuItems = [
     { icon: Settings, label: "Ajustes", id: "settings" },
 ];
 
-export function Sidebar({ currentPage, setCurrentPage, className, onClose }) {
+export function Sidebar({ currentPage, setCurrentPage, className, onClose, user }) {
+    const currentUser = user || clientConfig.identity;
     return (
         // CONTENEDOR FLOTANTE
-        <aside className={cn("fixed left-4 top-4 bottom-4 w-72 flex flex-col z-50", className)}>
+        <aside className={cn("fixed left-4 top-4 bottom-4 w-72 flex flex-col z-30", className)}>
 
             {/* CÁPSULA DE VIDRIO (GLASSMORPHISM) */}
             <div className="flex-1 rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-sm flex flex-col overflow-hidden relative transition-all">
@@ -55,7 +57,7 @@ export function Sidebar({ currentPage, setCurrentPage, className, onClose }) {
                                 if (onClose) onClose();
                             }}
                             className={cn(
-                                "group w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden text-left cursor-pointer",
+                                "outline-none focus:outline-none focus:ring-0 focus-visible:ring-0 group w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 relative overflow-hidden text-left cursor-pointer",
                                 currentPage === item.id
                                     ? "bg-primary text-white"
                                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
@@ -87,14 +89,14 @@ export function Sidebar({ currentPage, setCurrentPage, className, onClose }) {
                         <div className="flex items-center gap-3 mb-3">
                             <div className="h-10 w-10 rounded-full bg-slate-200 border-2 border-white shadow-sm overflow-hidden">
                                 <img
-                                    src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-                                    alt="Doctor"
+                                    src={currentUser.avatar}
+                                    alt={currentUser.name}
                                     className="h-full w-full object-cover"
                                 />
                             </div>
                             <div className="flex flex-col overflow-hidden">
-                                <span className="text-sm font-bold text-slate-800 truncate">Dr. Vantra</span>
-                                <span className="text-xs text-slate-500 truncate">Cardiólogo</span>
+                                <span className="text-sm font-bold text-slate-800 truncate">{currentUser.name}</span>
+                                <span className="text-xs text-slate-500 truncate">{currentUser.specialty}</span>
                             </div>
                         </div>
                         <Button variant="ghost" size="sm" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 h-8 text-xs rounded-xl">

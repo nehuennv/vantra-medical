@@ -7,6 +7,7 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { SourcesWidget, RetentionWidget, DemandPeaksWidget } from "@/components/dashboard/MetricsWidgets";
 import { clientConfig } from "@/config/client";
 import { motion } from "framer-motion";
+import { parseKpiValue } from "@/lib/utils";
 
 export function DashboardPage() {
     const { identity, business, theme, mockData } = clientConfig;
@@ -65,31 +66,8 @@ export function DashboardPage() {
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
             >
                 {mockData.kpis.map((kpi, index) => {
-                    // Logic to extract numeric value for animation
-                    let targetValue = 0;
-                    let suffix = "";
-                    let prefix = "";
-
-                    // If it's a currency, handle it
-                    if (kpi.isCurrency) {
-                        prefix = business.currency;
-                    }
-
-                    // Parse the raw string value (e.g., "142", "4.2%", "2.4M")
-                    const rawString = String(kpi.value);
-
-                    if (rawString.includes("%")) {
-                        targetValue = parseFloat(rawString.replace("%", ""));
-                        suffix = "%";
-                    } else if (rawString.toLowerCase().includes("m")) {
-                        targetValue = parseFloat(rawString.replace(/m/i, ""));
-                        suffix = "M";
-                    } else if (rawString.toLowerCase().includes("k")) {
-                        targetValue = parseFloat(rawString.replace(/k/i, ""));
-                        suffix = "k";
-                    } else {
-                        targetValue = parseFloat(rawString.replace(/[^0-9.]/g, ""));
-                    }
+                    const { value: targetValue, suffix } = parseKpiValue(kpi.value);
+                    const prefix = kpi.isCurrency ? business.currency : "";
 
                     return (
                         <motion.div
@@ -107,7 +85,7 @@ export function DashboardPage() {
                             <StatCard
                                 title={kpi.title}
                                 value={kpi.value} // Fallback / Static
-                                targetValue={isNaN(targetValue) ? 0 : targetValue}
+                                targetValue={targetValue}
                                 prefix={prefix}
                                 suffix={suffix}
                                 trend={kpi.trend}

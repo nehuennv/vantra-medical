@@ -3,7 +3,7 @@ import { Calendar, Users, TrendingUp, AlertCircle, Phone, Globe, BarChart3 } fro
 export const clientConfig = {
     identity: {
         name: "Dr. Villavicencio",
-        specialty: "Cardiología Intervencionista",
+        specialty: "Cardiología",
         avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
         greeting: "Hola",
     },

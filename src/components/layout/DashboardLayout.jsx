@@ -7,7 +7,7 @@ export function DashboardLayout({ children, currentPage, setCurrentPage }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-slate-50/50 flex flex-col lg:flex-row">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50/40 via-slate-50/50 to-indigo-100/40 flex flex-col lg:flex-row">
 
             {/* Mobile Header (Visible < lg) */}
             <div className="lg:hidden flex items-center justify-between p-4 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
@@ -32,7 +32,7 @@ export function DashboardLayout({ children, currentPage, setCurrentPage }) {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsMobileMenuOpen(false)}
-                            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 lg:hidden"
+                            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
                         />
 
                         {/* Drawer */}
@@ -65,7 +65,11 @@ export function DashboardLayout({ children, currentPage, setCurrentPage }) {
             </div>
 
             {/* Layout Main */}
-            <div className="flex-1 flex flex-col lg:pl-[288px]"> {/* 72px * 4 = 288px width + gap */}
+            {/* 
+                Calculated Padding: 
+                Sidebar Width (w-72 = 18rem) + Left Position (left-4 = 1rem) + Gap (1rem) = 20rem (pl-80)
+            */}
+            <div className="flex-1 flex flex-col lg:pl-80 transition-[padding] duration-300">
                 {/* Page Content */}
                 <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1920px] mx-auto w-full">
                     {children}

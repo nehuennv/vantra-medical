@@ -50,3 +50,47 @@ export function getAvatarColor(name) {
     const index = Math.abs(hash) % colors.length;
     return colors[index];
 }
+
+/**
+ * Parsea un string de KPI con sufijos (k, M, %) y devuelve el valor numérico, sufijo y valor crudo.
+ * @param {string|number} valueString - El valor en string (ej: "2.4M", "50%", "100k")
+ * @returns {object} { value, suffix, raw }
+ */
+export function parseKpiValue(valueString) {
+    // Si es null/undefined, devolver defecto
+    if (valueString === null || valueString === undefined) {
+        return { value: 0, suffix: "", raw: 0 };
+    }
+
+    const str = String(valueString).trim();
+    let value = 0;
+    let suffix = "";
+    let raw = 0;
+
+    // Detectar sufijo y calcular
+    if (str.includes("%")) {
+        value = parseFloat(str.replace("%", ""));
+        suffix = "%";
+        raw = value; // Por lo general para % el 'raw' se puede considerar el mismo numero (o /100 segun uso, pero aqui mantenemos la escala visual)
+    } else if (str.toLowerCase().includes("m")) {
+        value = parseFloat(str.replace(/m/i, ""));
+        suffix = "M";
+        raw = value * 1000000;
+    } else if (str.toLowerCase().includes("k")) {
+        value = parseFloat(str.replace(/k/i, ""));
+        suffix = "k";
+        raw = value * 1000;
+    } else {
+        // Limpiar cualquier caracter no numérico excepto punto y menos
+        value = parseFloat(str.replace(/[^0-9.-]/g, ""));
+        raw = value;
+    }
+
+    // Seguridad contra NaN
+    if (isNaN(value)) {
+        value = 0;
+        raw = 0;
+    }
+
+    return { value, suffix, raw };
+}

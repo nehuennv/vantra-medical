@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Plus, Filter, Download, Users } from 'lucide-react';
+import { Plus, Search, Filter, Download, Users, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
+import { CreatePatientModal } from "@/components/patients/CreatePatientModal";
 import { Button } from "@/components/ui/button";
 import { mockPatients } from "../data/mockPatients";
 import { PatientTable } from "../components/patients/PatientTable";
@@ -9,29 +10,95 @@ import { motion, AnimatePresence } from "framer-motion";
 export function PatientsPage() {
     // 1. Estados
     const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
-    const [patients] = useState(mockPatients);
+    const [filterInsurance, setFilterInsurance] = useState("all");
+    const [patients, setPatients] = useState(mockPatients);
+
+    // Modal State
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    // Pagination & Sorting State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(8); // Keeping list short for performance
+    const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+    const [isLoading, setIsLoading] = useState(false);
 
     // Drawer states
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     // 2. Lógica de Filtrado
-    const filteredPatients = patients.filter(patient => {
-        const matchesSearch =
-            patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            patient.contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            patient.contact.phone.includes(searchTerm) ||
-            patient.id.toLowerCase().includes(searchTerm.toLowerCase());
+    // 2. Lógica de Filtrado, Ordenamiento y Paginación
+    const processedPatients = React.useMemo(() => {
+        let result = [...patients];
 
-        const matchesStatus = statusFilter === "all" || patient.status === statusFilter;
+        // Filtrado por búsqueda
+        if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
+            result = result.filter(patient =>
+                patient.name.toLowerCase().includes(lowerTerm) ||
+                patient.contact.email.toLowerCase().includes(lowerTerm) ||
+                patient.contact.phone.includes(lowerTerm) ||
+                (patient.dni && patient.dni.includes(lowerTerm))
+            );
+        }
 
-        return matchesSearch && matchesStatus;
-    });
+        // Filtrado por Obra Social
+        if (filterInsurance !== 'all') {
+            const normalizedFilter = filterInsurance.replace('_', ' ');
+            result = result.filter(patient =>
+                patient.insurance?.toLowerCase().includes(normalizedFilter)
+            );
+        }
+
+        // Ordenamiento
+        if (sortConfig.key) {
+            result.sort((a, b) => {
+                let aValue = a[sortConfig.key];
+                let bValue = b[sortConfig.key];
+
+                // Handle nested keys manually if needed, or keeping it simple for now
+                // For this mock, keys are top level mostly, except maybe 'contact' but user asked for Name sorting mainly.
+
+                if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+                if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [patients, searchTerm, sortConfig, filterInsurance]);
+
+    // Calcular totales
+    const totalPages = Math.ceil(processedPatients.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedPatients = processedPatients.slice(startIndex, startIndex + itemsPerPage);
+
+    // Efecto de carga simulada al cambiar filtros o página
+    React.useEffect(() => {
+        setIsLoading(true);
+        const timer = setTimeout(() => setIsLoading(false), 300); // Small 300ms fake load to feel "processed"
+        return () => clearTimeout(timer);
+    }, [searchTerm, currentPage, sortConfig]);
+
+    // Resetear a pag 1 si cambia búsqueda
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     const activeCount = patients.filter(p => p.status === 'active').length;
 
     // 3. Handlers
+    // 3. Handlers
+    const handleSort = (key) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
     const handlePatientClick = (patient) => {
         setSelectedPatient(patient);
         setIsDrawerOpen(true);
@@ -40,6 +107,10 @@ export function PatientsPage() {
     const handleCloseDrawer = () => {
         setIsDrawerOpen(false);
         setTimeout(() => setSelectedPatient(null), 300); // Wait for animation
+    };
+
+    const handleCreatePatient = (newPatient) => {
+        setPatients(prev => [newPatient, ...prev]);
     };
 
     const containerVariants = {
@@ -88,7 +159,10 @@ export function PatientsPage() {
                         </span>
                     </p>
                 </div>
-                <Button className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold transform hover:scale-105 transition-transform duration-200">
+                <Button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold transform hover:scale-105 transition-transform duration-200"
+                >
                     <Plus className="h-4 w-4 mr-2" />
                     Nuevo Paciente
                 </Button>
@@ -110,33 +184,50 @@ export function PatientsPage() {
                 </div>
 
                 {/* Filters */}
-                <div className="flex gap-3 w-full md:w-auto">
-                    <div className="relative">
-                        <select
-                            className="appearance-none h-full pl-10 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer hover:bg-slate-50 transition-colors"
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <option value="all">Todos los estados</option>
-                            <option value="active">Activos</option>
-                            <option value="inactive">Inactivos</option>
-                            <option value="archived">Archivados</option>
-                        </select>
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                    </div>
+                <div className="flex flex-wrap gap-3 w-full md:w-auto items-center">
 
-                    <Button variant="outline" className="border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl px-4">
+                    {/* Insurance Filter */}
+                    <div className="relative group w-full md:w-auto">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">
+                            <Filter className="h-4 w-4" />
+                        </div>
+                        <select
+                            className="w-full md:w-48 pl-10 pr-8 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm outline-none appearance-none cursor-pointer text-slate-600"
+                            value={filterInsurance}
+                            onChange={(e) => setFilterInsurance(e.target.value)}
+                        >
+                            <option value="all">Todas</option>
+                            <option value="particular">Particular</option>
+                            <option value="osde">OSDE</option>
+                            <option value="swiss_medical">Swiss Medical</option>
+                            <option value="galeno">Galeno</option>
+                            <option value="omint">Omint</option>
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                            <SlidersHorizontal className="h-3 w-3" />
+                        </div>
+                    </div>
+                    <Button variant="outline" className="border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl px-4 h-10 hidden sm:flex">
                         <Download className="h-4 w-4 mr-2" />
                         Exportar
                     </Button>
                 </div>
             </motion.div>
 
-            {/* TableContainer - We wrap PatientTable in a motion div to participate in stagger */}
+            {/* TableContainer */}
             <motion.div variants={itemVariants}>
                 <PatientTable
-                    patients={filteredPatients}
+                    patients={paginatedPatients}
+                    isLoading={isLoading}
                     onPatientClick={handlePatientClick}
+                    pagination={{
+                        currentPage,
+                        totalPages,
+                        onPageChange: setCurrentPage,
+                        totalItems: processedPatients.length,
+                        startIndex: startIndex + 1,
+                        endIndex: Math.min(startIndex + itemsPerPage, processedPatients.length)
+                    }}
                 />
             </motion.div>
 
@@ -151,6 +242,12 @@ export function PatientsPage() {
                 )}
             </AnimatePresence>
 
-        </motion.div>
+            <CreatePatientModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSubmit={handleCreatePatient}
+            />
+
+        </motion.div >
     );
 }

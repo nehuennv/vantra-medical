@@ -85,16 +85,18 @@
 
 @layer base {
   * {
-    @apply border-border;
-    outline: none !important;
+    @apply border-border outline-none;
   }
 
-  /* Global cleanup for focus states */
-  *:focus,
-  *:active,
+  /* Global cleanup for focus states - Maintaining Accessibility */
+  /* Only apply ring if it is strictly focus-visible */
   *:focus-visible {
-    outline: none !important;
-    @apply ring-0 ring-offset-0;
+    @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Ensure standard focus has NO ring/outline */
+  *:focus {
+    @apply outline-none ring-0 ring-offset-0;
   }
 
   body {

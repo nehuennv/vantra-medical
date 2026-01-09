@@ -1,11 +1,13 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, MessageCircle, FileText, User, MapPin, Hash, Phone, Mail, Clock, CheckCircle2 } from 'lucide-react';
+import { X, Calendar, MessageCircle, FileText, User, MapPin, Hash, Phone, Mail, Clock, CheckCircle2, Activity, History, Pill, UploadCloud } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn, getAvatarColor } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 export function PatientDrawer({ isOpen, onClose, patient }) {
+    useScrollLock(!!patient); // Lock if patient exists (drawer uses patient prop existence as trigger)
     // Note: We don't check !isOpen here because that is handled by AnimatePresence in the parent.
     // We only check for patient existence.
     if (!patient) return null;
@@ -28,11 +30,11 @@ export function PatientDrawer({ isOpen, onClose, patient }) {
                 animate={{ x: 0 }}
                 exit={{ x: "100%" }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="relative w-full max-w-lg h-full bg-white shadow-2xl flex flex-col max-h-screen"
+                className="relative w-full max-w-lg h-full bg-gradient-to-b from-slate-50/90 via-indigo-50/90 to-slate-50/90 backdrop-blur-xl shadow-2xl flex flex-col max-h-screen border-l border-white/20"
             >
 
                 {/* 1. Header Premium */}
-                <div className="relative pt-12 pb-8 px-8 bg-gradient-to-b from-slate-50 to-white border-b border-slate-100">
+                <div className="relative pt-12 pb-8 px-8 bg-white/90 backdrop-blur-md border-b border-indigo-100/50">
 
                     {/* Botón Cerrar Flotante */}
                     <button
@@ -77,7 +79,7 @@ export function PatientDrawer({ isOpen, onClose, patient }) {
 
                         {/* Botones de Acción Primaria */}
                         <div className="flex gap-3 w-full max-w-sm">
-                            <Button className="flex-1 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 h-10 rounded-xl font-semibold transition-all hover:-translate-y-0.5">
+                            <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20 h-10 rounded-xl font-semibold transition-all hover:-translate-y-0.5">
                                 <Calendar className="h-4 w-4 mr-2" />
                                 Agendar
                             </Button>
@@ -93,7 +95,7 @@ export function PatientDrawer({ isOpen, onClose, patient }) {
                 </div>
 
                 {/* 2. Contenido Scrollable */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-white">
+                <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide">
 
                     {/* Sección: Datos de Contacto (Grid) */}
                     <section>
@@ -101,22 +103,22 @@ export function PatientDrawer({ isOpen, onClose, patient }) {
                             <User className="h-3 w-3" /> Información Del Paciente
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+                            <div className="p-4 rounded-2xl bg-white/70 border border-white/50 hover:border-indigo-200/50 transition-colors backdrop-blur-sm shadow-sm">
                                 <span className="block text-xs text-slate-400 mb-1">DNI</span>
                                 <span className="block text-sm font-bold text-slate-700">{patient.dni || '-'}</span>
                             </div>
-                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+                            <div className="p-4 rounded-2xl bg-white/70 border border-white/50 hover:border-indigo-200/50 transition-colors backdrop-blur-sm shadow-sm">
                                 <span className="block text-xs text-slate-400 mb-1">Nacimiento</span>
                                 <span className="block text-sm font-bold text-slate-700">{patient.birthDate || '-'}</span>
                             </div>
-                            <div className="col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors flex items-center justify-between">
+                            <div className="col-span-2 p-4 rounded-2xl bg-white/70 border border-white/50 hover:border-indigo-200/50 transition-colors flex items-center justify-between backdrop-blur-sm shadow-sm">
                                 <div>
                                     <span className="block text-xs text-slate-400 mb-1">Email</span>
                                     <span className="block text-sm font-bold text-slate-700 truncate">{patient.contact.email}</span>
                                 </div>
                                 <Mail className="h-4 w-4 text-slate-300" />
                             </div>
-                            <div className="col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors flex items-center justify-between">
+                            <div className="col-span-2 p-4 rounded-2xl bg-white/70 border border-white/50 hover:border-indigo-200/50 transition-colors flex items-center justify-between backdrop-blur-sm shadow-sm">
                                 <div>
                                     <span className="block text-xs text-slate-400 mb-1">Teléfono</span>
                                     <span className="block text-sm font-bold text-slate-700">{patient.contact.phone}</span>
@@ -125,6 +127,68 @@ export function PatientDrawer({ isOpen, onClose, patient }) {
                             </div>
                         </div>
                     </section>
+
+
+                    {/* Sección: Ficha Médica (Nuevo) */}
+                    {patient.medicalHistory && (
+                        <section>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Activity className="h-3 w-3" /> Ficha Médica
+                            </h3>
+                            <div className="bg-white/70 border border-white/50 rounded-2xl p-5 space-y-4 backdrop-blur-sm shadow-sm">
+                                <div>
+                                    <span className="text-xs text-slate-400 mb-1 block flex items-center gap-1"><History className="h-3 w-3" /> Antecedentes Patológicos</span>
+                                    <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                                        {patient.medicalHistory.pathological || "Sin antecedentes registrados."}
+                                    </p>
+                                </div>
+                                <div className="w-full h-px bg-indigo-50" />
+                                <div>
+                                    <span className="text-xs text-slate-400 mb-1 block flex items-center gap-1"><FileText className="h-3 w-3" /> Motivo Actual</span>
+                                    <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                                        {patient.medicalHistory.currentIllness || "No especificado."}
+                                    </p>
+                                </div>
+                                <div className="w-full h-px bg-indigo-50" />
+                                <div>
+                                    <span className="text-xs text-slate-400 mb-1 block flex items-center gap-1"><Pill className="h-3 w-3" /> Medicación Actual</span>
+                                    <div className="flex gap-2 mt-1">
+                                        {patient.medicalHistory.medication ? (
+                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-semibold">
+                                                {patient.medicalHistory.medication}
+                                            </span>
+                                        ) : (
+                                            <span className="text-sm text-slate-400 italic">Niega medicación.</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Archivos Adjuntos */}
+                                {patient.medicalHistory.files && patient.medicalHistory.files.length > 0 && (
+                                    <>
+                                        <div className="w-full h-px bg-indigo-50" />
+                                        <div>
+                                            <span className="text-xs text-slate-400 mb-2 block flex items-center gap-1"><UploadCloud className="h-3 w-3" /> Adjuntos</span>
+                                            <div className="grid gap-2">
+                                                {patient.medicalHistory.files.map((f, idx) => (
+                                                    <div key={idx} className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                                        <div className="h-8 w-8 bg-indigo-50 text-indigo-600 rounded-md flex items-center justify-center">
+                                                            <FileText className="h-4 w-4" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-bold text-slate-700 truncate">{f.file?.name || "Archivo Adjunto"}</p>
+                                                            <p className="text-[10px] text-slate-400">{f.note || "Sin notas"}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                            </div>
+                        </section>
+                    )}
 
                     {/* Sección: Notas Clínicas (Sticky Note) */}
                     <section>
@@ -137,9 +201,6 @@ export function PatientDrawer({ isOpen, onClose, patient }) {
                                 placeholder="Escribe una nota clínica relevante..."
                                 defaultValue={patient.notes}
                             />
-                            <div className="absolute top-2 right-2 opacity-10">
-                                <FileText className="h-12 w-12 text-amber-900" />
-                            </div>
                         </div>
                     </section>
 
@@ -149,7 +210,7 @@ export function PatientDrawer({ isOpen, onClose, patient }) {
                             <Clock className="h-3 w-3" /> Historial de Visitas
                         </h3>
 
-                        <div className="relative pl-4 space-y-6 before:absolute before:left-[5px] before:top-2 before:h-full before:w-[2px] before:bg-slate-100">
+                        <div className="relative pl-4 space-y-6 before:absolute before:left-[5px] before:top-2 before:h-full before:w-[2px] before:bg-indigo-50">
 
                             {/* Evento 1 */}
                             <div className="relative pl-6 group">
