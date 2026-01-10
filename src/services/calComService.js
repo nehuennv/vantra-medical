@@ -1,138 +1,137 @@
 import { calComConfig } from '@/config/calcom';
 
-/**
- * Service to interact with Cal.com API.
- * Currently mocks data for demonstration purposes until a real API Key is provided.
- */
 export const calComService = {
 
     /**
-     * Fetch available slots for a given date range.
-     * @param {Date} startDate 
-     * @param {Date} endDate 
+     * Fetch available slots from Cal.com API
+     * Returns object with format: { "Thu Jan 11 2024": ["09:00", ...], ... }
      */
     async getAvailableSlots(startDate, endDate) {
-        // REAL API CALL IMPLEMENTATION (Commented out for future use)
-        /*
-        const params = new URLSearchParams({
-            apiKey: calComConfig.apiKey,
-            startTime: startDate.toISOString(),
-            endTime: endDate.toISOString(),
-            eventTypeId: calComConfig.eventTypeId
-        });
-        const response = await fetch(`${calComConfig.baseUrl}/slots?${params}`);
-        return await response.json();
-        */
+        try {
+            const params = new URLSearchParams({
+                apiKey: calComConfig.apiKey,
+                startTime: startDate.toISOString(),
+                endTime: endDate.toISOString(),
+                eventTypeId: calComConfig.eventTypeId
+            });
 
-        // MOCK DATA
-        console.log(`[Cal.com Service] Fetching slots from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+            const response = await fetch(`${calComConfig.baseUrl}/slots?${params}`);
 
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 600));
-
-        // Generate some random slots
-        const slots = {};
-        let cursor = new Date(startDate);
-        while (cursor <= endDate) {
-            const dateStr = cursor.toDateString();
-
-            // Randomly available: Mon-Fri only
-            const day = cursor.getDay();
-            if (day !== 0 && day !== 6) {
-                slots[dateStr] = [
-                    "09:00", "09:30", "10:00", "11:30",
-                    "14:00", "15:30", "16:00", "16:30"
-                ].filter(() => Math.random() > 0.3); // Randomly remove some slots to simulate busyness
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`Cal.com API Error: ${response.status} - ${errorBody}`);
             }
 
-            cursor.setDate(cursor.getDate() + 1);
-        }
+            const data = await response.json();
+            const rawSlots = data.slots || {};
+            const transformedSlots = {};
 
-        return slots;
+            // Transform API format { "2024-01-01": [ { time: "ISO..." } ] }
+            // To Frontend format { "Mon Jan 01 2024": ["09:00", "09:30"] }
+            Object.keys(rawSlots).forEach(dateKey => {
+                const daySlots = rawSlots[dateKey];
+
+                // Parse date key YYYY-MM-DD (treat as local to avoid TZ shifts if possible, or ISO)
+                // Appending T00:00:00 to ensure we parse the correct calendar day
+                const dateObj = new Date(`${dateKey}T00:00:00`);
+                const frontendDateKey = dateObj.toDateString(); // "Sun Jan 01 2024"
+
+                if (Array.isArray(daySlots) && daySlots.length > 0) {
+                    transformedSlots[frontendDateKey] = daySlots.map(slot => {
+                        const slotDate = new Date(slot.time);
+                        return slotDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                    });
+                }
+            });
+
+            return transformedSlots;
+
+        } catch (error) {
+            console.error("[Cal.com Service] Error fetching slots:", error);
+            console.warn("Check if 'eventTypeId' is correct in src/config/calcom.js");
+            return {}; // Return empty to prevent crash
+        }
     },
 
     /**
-     * Create a booking.
-     * @param {Object} bookingDetails 
+     * Create a Booking via Cal.com API
      */
     async createBooking(bookingDetails) {
-        // REAL API CALL (Commented out)
-        /*
-        const response = await fetch(`${calComConfig.baseUrl}/bookings?apiKey=${calComConfig.apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        try {
+            const payload = {
                 eventTypeId: parseInt(calComConfig.eventTypeId),
-                start: bookingDetails.startISO, // "2024-01-10T09:00:00.000Z"
+                start: bookingDetails.startISO,
                 responses: {
                     name: bookingDetails.name,
                     email: bookingDetails.email,
                     notes: bookingDetails.notes
                 },
                 metadata: {},
-                timeZone: "America/Argentina/Buenos_Aires"
-            })
-        });
-        return await response.json();
-        */
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Argentina/Buenos_Aires",
+                language: "es"
+            };
 
-        console.log(`[Cal.com Service] Creating booking:`, bookingDetails);
-        await new Promise(resolve => setTimeout(resolve, 1500));
+            const response = await fetch(`${calComConfig.baseUrl}/bookings?apiKey=${calComConfig.apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-        return {
-            success: true,
-            id: Math.floor(Math.random() * 100000),
-            status: "ACCEPTED",
-            uid: "b_" + Math.random().toString(36).substr(2, 9)
-        };
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`Booking Failed: ${response.status} - ${errorBody}`);
+            }
+
+            return await response.json();
+
+        } catch (error) {
+            console.error("[Cal.com Service] Error creating booking:", error);
+            throw error; // Re-throw to handle UI state
+        }
     },
 
     /**
-     * Get all bookings (Agenda).
-     * @param {Date} fromDate 
-     * @param {Date} toDate 
+     * Fetch Bookings (Agenda) from Cal.com API
      */
     async getBookings(fromDate, toDate) {
-        // REAL API CALL
-        /*
-        const response = await fetch(`${calComConfig.baseUrl}/bookings?apiKey=${calComConfig.apiKey}&dateFrom=${fromDate.toISOString()}&dateTo=${toDate.toISOString()}`);
-        */
+        try {
+            const params = new URLSearchParams({
+                apiKey: calComConfig.apiKey,
+                dateFrom: fromDate.toISOString(),
+                dateTo: toDate.toISOString(),
+                // Include cancelled? usually no for agenda view
+                status: 'accepted,pending'
+            });
 
-        console.log(`[Cal.com Service] Fetching bookings for agenda...`);
-        await new Promise(resolve => setTimeout(resolve, 800));
+            const response = await fetch(`${calComConfig.baseUrl}/bookings?${params}`);
 
-        // Mock Bookings
-        const mockBookings = [
-            {
-                id: 101,
-                title: "Consulta - Carlos Rodriguez",
-                description: "Control Hipertensión",
-                startTime: new Date(new Date().setHours(9, 0, 0, 0)).toISOString(),
-                endTime: new Date(new Date().setHours(9, 30, 0, 0)).toISOString(),
-                status: "ACCEPTED",
-                attendees: [{ name: "Carlos Rodriguez", email: "carlos.rod@gmail.com" }]
-            },
-            {
-                id: 102,
-                title: "Consulta - Maria Lopez",
-                description: "Control Embarazo",
-                startTime: new Date(new Date().setHours(11, 0, 0, 0)).toISOString(),
-                endTime: new Date(new Date().setHours(11, 45, 0, 0)).toISOString(),
-                status: "ACCEPTED",
-                attendees: [{ name: "Maria Lopez", email: "mfer.lopez@hotmail.com" }]
-            },
-            {
-                id: 103,
-                title: "Urgencia - Juan Martinez",
-                description: "Dolor Agudo",
-                startTime: new Date(new Date().setHours(14, 30, 0, 0)).toISOString(),
-                endTime: new Date(new Date().setHours(15, 0, 0, 0)).toISOString(),
-                status: "PENDING",
-                attendees: [{ name: "Juan Martinez", email: "juanp.martinez@gmail.com" }]
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`Cal.com API Error: ${response.status} - ${errorBody}`);
             }
-        ];
 
-        // Filter by date range loosely for mockup
-        return mockBookings;
+            const data = await response.json();
+            const bookingsList = data.bookings || [];
+
+            // Transform to our internal format
+            return bookingsList.map(b => ({
+                id: b.id,
+                title: b.title || `Cita con ${b.responses?.name || 'Paciente'}`,
+                description: b.description || b.responses?.notes || "Sin notas",
+                startTime: b.startTime, // Keeping ISO string
+                endTime: b.endTime,
+                status: b.status,
+                attendees: b.attendees || [
+                    {
+                        name: b.responses?.name || 'Desconocido',
+                        email: b.responses?.email || ''
+                    }
+                ]
+            }));
+
+        } catch (error) {
+            console.error("[Cal.com Service] Error fetching bookings:", error);
+            return [];
+        }
     }
 };

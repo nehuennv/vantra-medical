@@ -7,7 +7,8 @@ import {
     Settings,
     Activity,
     LogOut,
-    Plus
+    Plus,
+    Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { clientConfig } from "@/config/client";
 const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
     { icon: CalendarDays, label: "Agenda", id: "agenda" },
+    { icon: Clock, label: "Mis Horarios", id: "availability" },
     { icon: Users, label: "Pacientes", id: "patients" },
     { icon: MessageSquare, label: "Mensajes IA", id: "messages", badge: 3 },
     { icon: Settings, label: "Ajustes", id: "settings" },

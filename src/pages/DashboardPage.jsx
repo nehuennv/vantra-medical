@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Check, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { AgendaWidget } from "@/components/dashboard/AgendaWidget";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
@@ -8,9 +8,40 @@ import { SourcesWidget, RetentionWidget, DemandPeaksWidget } from "@/components/
 import { clientConfig } from "@/config/client";
 import { motion } from "framer-motion";
 import { parseKpiValue } from "@/lib/utils";
+import { calComService } from "@/services/calComService";
 
 export function DashboardPage() {
     const { identity, business, theme, mockData } = clientConfig;
+    const [appointments, setAppointments] = useState([]);
+
+    // Fetch real appointments for dashboard
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            const now = new Date();
+            const endOfDay = new Date();
+            endOfDay.setHours(23, 59, 59);
+
+            try {
+                // Fetch today's real bookings
+                const realBookings = await calComService.getBookings(now, endOfDay);
+
+                // Adapter for AgendaWidget format: { id, time, name, type, status }
+                const formatted = realBookings.map(b => ({
+                    id: b.id,
+                    time: new Date(b.startTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
+                    name: b.attendees[0]?.name || 'Desconocido',
+                    type: b.title,
+                    status: b.status === 'ACCEPTED' ? 'confirmed' : 'pending'
+                }));
+                setAppointments(formatted);
+            } catch (e) {
+                console.error("Dashboard fetch error", e);
+                // Fallback to mock on error
+                setAppointments(mockData.appointments);
+            }
+        };
+        fetchDashboardData();
+    }, []);
 
     const containerVariants = {
         hidden: { opacity: 0 },
@@ -54,10 +85,16 @@ export function DashboardPage() {
                         Resumen operativo del consultorio.
                     </p>
                 </div>
-                <Button className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold w-full sm:w-auto transform hover:scale-105 transition-transform duration-200">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo Turno
-                </Button>
+                {/* 
+                  En una app real, este botón podría redirigir a /new-appointment
+                  o abrir el modal directamente. 
+                 */}
+                <div className="flex gap-2">
+                    <Button className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold w-full sm:w-auto transform hover:scale-105 transition-transform duration-200">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuevo Turno
+                    </Button>
+                </div>
             </motion.div>
 
             {/* SECCIÓN 1: KPIS MACRO (Mobile First Grid) */}
@@ -114,9 +151,9 @@ export function DashboardPage() {
                     <ActivityFeed logs={mockData.activityLogs} />
                 </div>
 
-                {/* Agenda Widget */}
+                {/* Agenda Widget - NOW REAL DATA */}
                 <div className="xl:col-span-2 h-full min-h-[400px]">
-                    <AgendaWidget appointments={mockData.appointments} />
+                    <AgendaWidget appointments={appointments} />
                 </div>
             </motion.div>
 

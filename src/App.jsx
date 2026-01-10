@@ -4,10 +4,11 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { PatientsPage } from "@/pages/PatientsPage";
 import { NewAppointmentPage } from "@/pages/NewAppointmentPage";
 import { AgendaPage } from "@/pages/AgendaPage";
+import { AvailabilityPage } from "@/pages/AvailabilityPage";
 import { ThemeController } from "@/components/ThemeController";
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('agenda');
+  const [currentPage, setCurrentPage] = useState('availability'); // Start here for immediate feedback
 
   return (
     <>
@@ -17,6 +18,7 @@ function App() {
         {currentPage === 'patients' && <PatientsPage />}
         {currentPage === 'new-appointment' && <NewAppointmentPage onNavigate={setCurrentPage} />}
         {currentPage === 'agenda' && <AgendaPage />}
+        {currentPage === 'availability' && <AvailabilityPage />}
 
         {/* Placeholder for other pages */}
         {currentPage === 'messages' && <div className="p-8 text-slate-500">Mensajes Component (Coming Soon)</div>}
