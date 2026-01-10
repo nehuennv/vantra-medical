@@ -10,7 +10,7 @@ import { motion } from "framer-motion";
 import { parseKpiValue } from "@/lib/utils";
 import { calComService } from "@/services/calComService";
 
-export function DashboardPage() {
+export function DashboardPage({ onNavigate }) {
     const { identity, business, theme, mockData } = clientConfig;
     const [appointments, setAppointments] = useState([]);
 
@@ -85,12 +85,12 @@ export function DashboardPage() {
                         Resumen operativo del consultorio.
                     </p>
                 </div>
-                {/* 
-                  En una app real, este botón podría redirigir a /new-appointment
-                  o abrir el modal directamente. 
-                 */}
+                {/* ACCION PRINCIPAL */}
                 <div className="flex gap-2">
-                    <Button className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-semibold w-full sm:w-auto transform hover:scale-105 transition-transform duration-200">
+                    <Button
+                        onClick={() => onNavigate && onNavigate('new-appointment')}
+                        className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-bold w-full sm:w-auto transform hover:scale-105 transition-transform duration-200"
+                    >
                         <Plus className="h-4 w-4 mr-2" />
                         Nuevo Turno
                     </Button>

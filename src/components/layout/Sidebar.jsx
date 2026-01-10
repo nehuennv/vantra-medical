@@ -43,23 +43,9 @@ export function Sidebar({ currentPage, setCurrentPage, className, onClose, user 
                         </div>
                         <div className="flex flex-col">
                             <span className="font-bold text-lg tracking-tight text-slate-800 leading-none">Vantra<span className="text-primary">Med</span></span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Workspace</span>
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Workspace</span>
                         </div>
                     </div>
-                </div>
-
-                {/* ACTION BUTTON */}
-                <div className="px-4 pb-2">
-                    <Button
-                        onClick={() => {
-                            setCurrentPage('new-appointment');
-                            if (onClose) onClose();
-                        }}
-                        className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-900/20 rounded-2xl font-bold transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        <Plus className="h-5 w-5" />
-                        Nuevo Turno
-                    </Button>
                 </div>
 
                 {/* NAVEGACIÓN */}

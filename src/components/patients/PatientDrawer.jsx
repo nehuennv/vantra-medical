@@ -404,8 +404,13 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                                                             "ring-slate-100 bg-slate-200 group-hover:bg-primary group-hover:scale-110"
                                                         )}></div>
 
-                                                        {/* Card */}
-                                                        <div className="flex flex-col bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all duration-300">
+                                                        <div
+                                                            className="flex flex-col bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 cursor-pointer transition-all duration-300 relative group/card"
+                                                        >
+                                                            {/* Hover Action Overlay */}
+                                                            <div className="absolute inset-0 bg-white/90 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10 rounded-2xl">
+                                                                <Button size="sm" variant="outline" className="h-8 text-xs">Ver Detalle</Button>
+                                                            </div>
 
                                                             {/* Header Line */}
                                                             <div className="flex justify-between items-start mb-3">

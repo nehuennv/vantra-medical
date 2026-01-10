@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, User, ArrowLeft, CheckCircle2, Stethoscope, UserPlus, Pencil } from 'lucide-react';
+import { X, Upload, User, ArrowLeft, CheckCircle2, Stethoscope, UserPlus, Pencil, Mail, Phone, Calendar as CalendarIcon, FileText } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { cn } from "@/lib/utils";
@@ -57,11 +57,9 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                 medicalHistory: initialData.medicalHistory?.pathological || initialData.medicalData?.medicalHistory || '',
                 medications: initialData.medicalHistory?.medication || initialData.medicalData?.medications || '',
             });
-            // Try to map files if they exist in a compatible format
             const existingFiles = initialData.medicalHistory?.files || initialData.medicalData?.files || [];
             setFiles(existingFiles);
         } else if (isOpen && !initialData) {
-            // Reset if creating new
             setFormData(initialFormState);
             setFiles([]);
             setIsSuccess(false);
@@ -99,23 +97,21 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-
-        // Prepare object
         const patientData = {
             ...formData,
-            id: initialData ? initialData.id : `new-${Date.now()}`, // Keep ID if editing
+            id: initialData ? initialData.id : `new-${Date.now()}`,
             contact: {
                 email: formData.email,
                 phone: formData.phone,
                 whatsapp_normalized: formData.phone.replace(/\D/g, '')
             },
-            medicalData: { // Standardize this structure
+            medicalData: {
                 currentCondition: formData.currentCondition,
                 medicalHistory: formData.medicalHistory,
                 medications: formData.medications,
                 files: files
             },
-            medicalHistory: { // Backward compatibility with mock data structure
+            medicalHistory: { // Backward comp
                 currentIllness: formData.currentCondition,
                 pathological: formData.medicalHistory,
                 medication: formData.medications,
@@ -127,17 +123,11 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
             filesCount: files.length
         };
 
-        // Trigger Success Animation
         setIsSuccess(true);
-
-        // Actual Submit logic after short delay or immediately? 
-        // Better to submit data immediately but delay close
         onSubmit(patientData);
 
-        // Close after animation
         setTimeout(() => {
             onClose();
-            // Reset internal state after closing
             setTimeout(() => {
                 setIsSuccess(false);
                 setFormData(initialFormState);
@@ -147,31 +137,29 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
         }, 2000);
     };
 
-    // Usamos createPortal para que el modal esté en el body
     return createPortal(
         <AnimatePresence mode="wait">
             {isOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
 
-                    {/* Backdrop */}
+                    {/* Backdrop with Blur */}
                     <motion.div
                         key="backdrop"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
                         onClick={isSuccess ? undefined : onClose}
-                        className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm dark:bg-slate-950/40"
+                        className="fixed inset-0 bg-slate-900/40 backdrop-blur-md transition-all"
                     />
 
-                    {/* Modal Principal */}
+                    {/* Modal Content */}
                     <motion.div
                         key="modal-content"
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        transition={{ duration: 0.3, type: "spring", stiffness: 300, damping: 25 }}
-                        className="relative w-full max-w-4xl h-[70vh] min-h-[600px] flex md:flex-row flex-col bg-white rounded-3xl shadow-2xl overflow-hidden ring-1 ring-black/5"
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                        className="relative w-full max-w-5xl h-[85vh] max-h-[800px] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row ring-1 ring-white/50"
                     >
 
                         {/* SUCCESS OVERLAY */}
@@ -181,168 +169,164 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-8"
+                                    className="absolute inset-0 z-50 bg-white/95 backdrop-blur-xl flex flex-col items-center justify-center p-8 text-center"
                                 >
                                     <motion.div
                                         initial={{ scale: 0.5, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
-                                        className="h-24 w-24 rounded-full bg-emerald-100 flex items-center justify-center mb-6"
+                                        className="h-32 w-32 rounded-full bg-emerald-100/50 flex items-center justify-center mb-6 relative"
                                     >
-                                        <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+                                        <div className="absolute inset-0 bg-emerald-400/20 rounded-full animate-ping opacity-20"></div>
+                                        <CheckCircle2 className="h-16 w-16 text-emerald-500" strokeWidth={3} />
                                     </motion.div>
-                                    <motion.h3
-                                        initial={{ y: 20, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        transition={{ delay: 0.2 }}
-                                        className="text-2xl font-bold text-slate-800 mb-2"
-                                    >
-                                        {initialData ? 'Cambios Guardados' : 'Paciente Creado'}
-                                    </motion.h3>
-                                    <motion.p
-                                        initial={{ y: 20, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        transition={{ delay: 0.3 }}
-                                        className="text-slate-500 font-medium"
-                                    >
-                                        Los datos se han actualizado correctamente en el sistema.
-                                    </motion.p>
+                                    <h3 className="text-3xl font-bold text-slate-800 mb-2 tracking-tight">
+                                        {initialData ? 'Perfil Actualizado' : 'Paciente Registrado'}
+                                    </h3>
+                                    <p className="text-slate-500 text-lg">Los datos han sido sincronizados correctamente.</p>
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
-                        {/* Sidebar Izquierdo */}
-                        <div className="w-full md:w-[260px] bg-gradient-to-br from-slate-50 to-indigo-50/20 border-r border-indigo-100 flex flex-col shrink-0 relative overflow-hidden">
-
-                            {/* Decorative Background Elements */}
-                            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 bg-primary/5 rounded-full blur-3xl"></div>
-
-                            <div className="p-6 relative z-10">
-                                <div className="flex items-center gap-3 mb-1">
+                        {/* SIDEBAR (Progress & Context) */}
+                        <div className="w-full md:w-72 bg-slate-50 border-r border-slate-100 flex flex-col shrink-0">
+                            <div className="p-8">
+                                <div className="flex items-center gap-4 mb-2">
                                     <div className={cn(
-                                        "h-10 w-10 rounded-xl bg-white shadow-sm ring-1 ring-slate-100 flex items-center justify-center",
-                                        initialData ? "text-amber-500" : "text-primary"
+                                        "h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm",
+                                        initialData ? "bg-amber-100 text-amber-600" : "bg-indigo-100 text-indigo-600"
                                     )}>
-                                        {initialData ? <Pencil className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+                                        {initialData ? <Pencil className="h-6 w-6" /> : <UserPlus className="h-6 w-6" />}
                                     </div>
-                                    <h2 className="text-lg font-bold text-slate-800 leading-tight">
-                                        {initialData ? 'Editar' : 'Nuevo'}<br />
-                                        <span className="text-primary">Paciente</span>
-                                    </h2>
+                                    <div>
+                                        <h2 className="text-lg font-bold text-slate-900 leading-tight">
+                                            {initialData ? 'Editar' : 'Nuevo'}<br />Paciente
+                                        </h2>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="p-4 space-y-2 flex-1 flex flex-col relative z-10">
-                                <LayoutGroup>
-                                    <button
-                                        onClick={() => setActiveTab('personal')}
-                                        className={`relative w-full text-left p-3 rounded-xl text-sm font-semibold transition-all duration-300 ease-in-out flex items-center gap-3 outline-none ${activeTab === 'personal' ? 'text-primary' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
-                                    >
-                                        {/* Fondo Activo con Animación Smooth */}
-                                        {activeTab === 'personal' && (
-                                            <motion.div
-                                                layoutId="activeTabBg"
-                                                className="absolute inset-0 bg-white shadow-sm border border-slate-100 rounded-xl"
-                                                initial={false}
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                            />
-                                        )}
-                                        <User className="h-4 w-4 relative z-10" />
-                                        <span className="relative z-10">Datos Personales</span>
-                                    </button>
+                            <div className="px-4 space-y-2 flex-1">
+                                <button
+                                    onClick={() => setActiveTab('personal')}
+                                    className={cn(
+                                        "w-full flex items-center gap-4 p-4 rounded-xl text-sm font-bold transition-all text-left group relative overflow-hidden",
+                                        activeTab === 'personal' ? "bg-white shadow-sm text-indigo-600 ring-1 ring-slate-100" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100/50"
+                                    )}
+                                >
+                                    <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center transition-colors", activeTab === 'personal' ? "bg-indigo-50" : "bg-transparent group-hover:bg-slate-100")}>
+                                        <User className="h-4 w-4" />
+                                    </div>
+                                    <span className="relative z-10">Datos Personales</span>
+                                    {activeTab === 'personal' && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-600 rounded-r-full" />}
+                                </button>
 
-                                    <button
-                                        onClick={() => setActiveTab('medical')}
-                                        className={`relative w-full text-left p-3 rounded-xl text-sm font-semibold transition-all duration-300 ease-in-out flex items-center gap-3 outline-none ${activeTab === 'medical' ? 'text-emerald-600' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'}`}
-                                    >
-                                        {activeTab === 'medical' && (
-                                            <motion.div
-                                                layoutId="activeTabBg"
-                                                className="absolute inset-0 bg-white shadow-sm border border-slate-100 rounded-xl"
-                                                initial={false}
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                            />
-                                        )}
-                                        <Stethoscope className="h-4 w-4 relative z-10" />
-                                        <span className="relative z-10">Ficha Médica</span>
-                                    </button>
-                                </LayoutGroup>
+                                <button
+                                    onClick={() => setActiveTab('medical')}
+                                    className={cn(
+                                        "w-full flex items-center gap-4 p-4 rounded-xl text-sm font-bold transition-all text-left group relative overflow-hidden",
+                                        activeTab === 'medical' ? "bg-white shadow-sm text-emerald-600 ring-1 ring-slate-100" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100/50"
+                                    )}
+                                >
+                                    <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center transition-colors", activeTab === 'medical' ? "bg-emerald-50" : "bg-transparent group-hover:bg-slate-100")}>
+                                        <Stethoscope className="h-4 w-4" />
+                                    </div>
+                                    <span className="relative z-10">Ficha Médica</span>
+                                    {activeTab === 'medical' && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-emerald-600 rounded-r-full" />}
+                                </button>
                             </div>
 
-                            {/* Footer del Sidebar */}
-                            <div className="p-6 relative z-10 opacity-70">
-                                <div className="flex items-center gap-2">
-                                    <div className={cn("h-2 w-2 rounded-full animate-pulse", initialData ? "bg-amber-500" : "bg-emerald-500")}></div>
-                                    <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
-                                        {initialData ? 'Modificando Registro' : 'Creando Perfil'}
-                                    </p>
+                            <div className="p-8 mt-auto opacity-50 hidden md:block">
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                                    Complete los campos obligatorios para dar de alta al paciente en el sistema.
                                 </div>
                             </div>
                         </div>
 
-                        {/* Panel Derecho (Contenido) */}
-                        <div className="flex-1 flex flex-col h-full bg-white relative min-w-0">
+                        {/* MAIN CONTENT FORM */}
+                        <div className="flex-1 flex flex-col relative bg-white">
 
-                            {/* Botón Cerrar */}
-                            <button
-                                onClick={onClose}
-                                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all duration-200 z-20"
-                            >
-                                <X className="h-4 w-4" />
+                            {/* Close Button */}
+                            <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-50 text-slate-300 hover:text-slate-800 transition-colors z-20">
+                                <X className="h-5 w-5" />
                             </button>
 
                             <form onSubmit={handleSubmit} className="flex flex-col h-full">
-                                {/* Contenedor Scrollable */}
-                                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8">
-                                    <AnimatePresence mode='wait'>
-                                        {activeTab === 'personal' ? (
+                                <div className="flex-1 overflow-y-auto custom-scrollbar p-8 md:p-12">
+                                    <AnimatePresence mode="wait">
+
+                                        {/* --- PERSONAL TAB --- */}
+                                        {activeTab === 'personal' && (
                                             <motion.div
                                                 key="personal"
-                                                initial={{ opacity: 0, x: 10 }}
+                                                initial={{ opacity: 0, x: 20 }}
                                                 animate={{ opacity: 1, x: 0 }}
-                                                exit={{ opacity: 0, x: -10 }}
-                                                transition={{ duration: 0.25, ease: "easeOut" }}
-                                                className="space-y-6"
+                                                exit={{ opacity: 0, x: -20 }}
+                                                transition={{ duration: 0.3 }}
+                                                className="space-y-8 max-w-3xl"
                                             >
-                                                <div className="flex items-center gap-2 pb-2 border-b border-indigo-50">
-                                                    <User className="h-4 w-4 text-primary" />
-                                                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Información Personal</h3>
+                                                <div>
+                                                    <h3 className="text-2xl font-bold text-slate-800 mb-1">Información Básica</h3>
+                                                    <p className="text-slate-400 text-sm">Datos de identificación y contacto.</p>
                                                 </div>
 
-                                                <div className="grid grid-cols-12 gap-x-4 gap-y-5">
-                                                    {/* Nombre completa toda la fila */}
-                                                    <div className="col-span-12 md:col-span-7 space-y-1.5">
-                                                        <label className="text-xs font-bold text-slate-500 ml-1">Apellido y Nombre</label>
-                                                        <input required name="name" value={formData.name} onChange={handleInputChange} placeholder="Ej: Juan Perez" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 placeholder:text-slate-400 text-sm font-medium" />
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="space-y-2 md:col-span-2">
+                                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nombre Completo</label>
+                                                        <div className="relative group">
+                                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                                            <input required name="name" value={formData.name} onChange={handleInputChange}
+                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
+                                                                placeholder="Ej: Juan Perez"
+                                                            />
+                                                        </div>
                                                     </div>
 
-                                                    {/* DNI */}
-                                                    <div className="col-span-12 md:col-span-5 space-y-1.5">
-                                                        <label className="text-xs font-bold text-slate-500 ml-1">Documento</label>
-                                                        <input required name="dni" value={formData.dni} onChange={handleInputChange} placeholder="Ingresar sin puntos" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 placeholder:text-slate-400 text-sm font-medium" />
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">DNI / Pasaporte</label>
+                                                        <input required name="dni" value={formData.dni} onChange={handleInputChange}
+                                                            className="w-full px-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800"
+                                                            placeholder="Sin puntos"
+                                                        />
                                                     </div>
 
-                                                    {/* Email */}
-                                                    <div className="col-span-12 md:col-span-6 space-y-1.5">
-                                                        <label className="text-xs font-bold text-slate-500 ml-1">Correo Electrónico</label>
-                                                        <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="nombre@ejemplo.com" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 placeholder:text-slate-400 text-sm font-medium" />
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Fecha Nacimiento</label>
+                                                        <div className="relative group">
+                                                            <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                                            <input type="date" name="birthDate" value={formData.birthDate} onChange={handleInputChange}
+                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800"
+                                                            />
+                                                        </div>
                                                     </div>
 
-                                                    {/* Teléfono */}
-                                                    <div className="col-span-12 md:col-span-6 space-y-1.5">
-                                                        <label className="text-xs font-bold text-slate-500 ml-1">Teléfono Móvil</label>
-                                                        <input name="phone" value={formData.phone} onChange={handleInputChange} placeholder="(011) 15-1234-5678" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 placeholder:text-slate-400 text-sm font-medium" />
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email</label>
+                                                        <div className="relative group">
+                                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                                            <input type="email" name="email" value={formData.email} onChange={handleInputChange}
+                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
+                                                                placeholder="cliente@email.com"
+                                                            />
+                                                        </div>
                                                     </div>
 
-                                                    {/* Nacimiento y Obra Social en una fila */}
-                                                    <div className="col-span-12 md:col-span-4 space-y-1.5">
-                                                        <label className="text-xs font-bold text-slate-500 ml-1">Fecha de Nacimiento</label>
-                                                        <input type="date" name="birthDate" value={formData.birthDate} onChange={handleInputChange} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 text-slate-600 text-sm font-medium" />
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Teléfono</label>
+                                                        <div className="relative group">
+                                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                                            <input name="phone" value={formData.phone} onChange={handleInputChange}
+                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
+                                                                placeholder="011 1234 5678"
+                                                            />
+                                                        </div>
                                                     </div>
-                                                    <div className="col-span-12 md:col-span-8 space-y-1.5">
-                                                        <label className="text-xs font-bold text-slate-500 ml-1">Cobertura Médica</label>
-                                                        <select name="insurance" value={formData.insurance} onChange={handleInputChange} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 cursor-pointer text-sm font-medium appearance-none">
-                                                            <option value="">Seleccionar cobertura...</option>
+
+                                                    <div className="space-y-2 md:col-span-2">
+                                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Obra Social / Prepaga</label>
+                                                        <select name="insurance" value={formData.insurance} onChange={handleInputChange}
+                                                            className="w-full px-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-700 appearance-none cursor-pointer"
+                                                        >
+                                                            <option value="" className="text-slate-400">Seleccionar cobertura...</option>
                                                             <option value="Particular">Particular</option>
                                                             <option value="OSDE">OSDE</option>
                                                             <option value="OSDE 210">OSDE 210</option>
@@ -350,166 +334,118 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                             <option value="Swiss Medical">Swiss Medical</option>
                                                             <option value="Galeno">Galeno</option>
                                                             <option value="PAMI">PAMI</option>
-                                                            <option value="Otra">Otra</option>
                                                         </select>
                                                     </div>
                                                 </div>
                                             </motion.div>
+                                        )}
 
-                                        ) : (
-
+                                        {/* --- MEDICAL TAB --- */}
+                                        {activeTab === 'medical' && (
                                             <motion.div
                                                 key="medical"
-                                                initial={{ opacity: 0, x: 10 }}
+                                                initial={{ opacity: 0, x: 20 }}
                                                 animate={{ opacity: 1, x: 0 }}
-                                                exit={{ opacity: 0, x: -10 }}
-                                                transition={{ duration: 0.25, ease: "easeOut" }}
-                                                className="space-y-6"
+                                                exit={{ opacity: 0, x: -20 }}
+                                                transition={{ duration: 0.3 }}
+                                                className="space-y-8 max-w-3xl"
                                             >
-                                                <div className="flex items-center gap-2 pb-2 border-b border-emerald-50">
-                                                    <Stethoscope className="h-4 w-4 text-emerald-500" />
-                                                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Ficha Clínica</h3>
+                                                <div>
+                                                    <h3 className="text-2xl font-bold text-slate-800 mb-1">Antecedentes Clínicos</h3>
+                                                    <p className="text-slate-400 text-sm">Historial médico y archivos adjuntos.</p>
                                                 </div>
 
-                                                {/* Motivo de Consulta - Prioridad visual */}
-                                                <div className="space-y-1.5">
-                                                    <label className="text-xs font-bold text-slate-500 ml-1">Motivo de Consulta / Enfermedad Actual</label>
-                                                    <textarea
-                                                        name="currentCondition"
-                                                        value={formData.currentCondition}
-                                                        onChange={handleInputChange}
-                                                        placeholder="Describa el motivo de la consulta..."
-                                                        className="w-full p-3.5 h-20 rounded-xl border border-slate-200 bg-emerald-50/30 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all duration-200 resize-none text-sm font-medium leading-relaxed"
-                                                    />
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-4 h-full">
-                                                    <div className="space-y-1.5 flex flex-col">
-                                                        <label className="text-xs font-bold text-slate-500 ml-1">Antecedentes Patológicos</label>
-                                                        <textarea
-                                                            name="medicalHistory"
-                                                            value={formData.medicalHistory}
-                                                            onChange={handleInputChange}
-                                                            placeholder="Coadyuvantes, cirugías previas..."
-                                                            className="w-full p-3.5 h-24 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all duration-200 resize-none text-sm font-medium leading-relaxed"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1.5 flex flex-col">
-                                                        <label className="text-xs font-bold text-slate-500 ml-1">Medicación Habitual</label>
-                                                        <textarea
-                                                            name="medications"
-                                                            value={formData.medications}
-                                                            onChange={handleInputChange}
-                                                            placeholder="Drogas, dosis y frecuencia..."
-                                                            className="w-full p-3.5 h-24 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all duration-200 resize-none text-sm font-medium leading-relaxed"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Sección Compacta de Archivos */}
-                                                <div className="bg-slate-50 rounded-xl border border-slate-100 p-3 flex flex-col gap-3">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-xs font-bold text-slate-500">Documentos Adjuntos ({files.length})</span>
-                                                        <label className="cursor-pointer bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-primary shadow-sm hover:bg-slate-50 hover:border-primary/30 transition-all duration-200 flex items-center gap-2">
-                                                            <Upload className="h-3 w-3" />
-                                                            Subir Archivo
-                                                            <input type="file" multiple className="hidden" onChange={handleFileAdd} />
+                                                <div className="space-y-6">
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1 flex items-center gap-2">
+                                                            <CheckCircle2 className="h-3 w-3 text-emerald-500" /> Motivo Principal
                                                         </label>
+                                                        <textarea
+                                                            name="currentCondition" value={formData.currentCondition} onChange={handleInputChange}
+                                                            placeholder="Describa el motivo de la consulta o enfermedad actual..."
+                                                            className="w-full p-4 h-24 rounded-xl border border-slate-200 bg-emerald-50/10 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all resize-none font-medium text-slate-700"
+                                                        />
                                                     </div>
 
-                                                    {files.length > 0 && (
-                                                        <div className="flex flex-col gap-2 pt-1 border-t border-slate-100/50 mt-1">
-                                                            <AnimatePresence>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Antecedentes</label>
+                                                            <textarea
+                                                                name="medicalHistory" value={formData.medicalHistory} onChange={handleInputChange}
+                                                                placeholder="Patologías previas..."
+                                                                className="w-full p-4 h-32 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all resize-none font-medium text-slate-700"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Medicación</label>
+                                                            <textarea
+                                                                name="medications" value={formData.medications} onChange={handleInputChange}
+                                                                placeholder="Medicación habitual..."
+                                                                className="w-full p-4 h-32 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all resize-none font-medium text-slate-700"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <h4 className="text-sm font-bold text-slate-700">Archivos Adjuntos</h4>
+                                                            <label className="cursor-pointer bg-white text-indigo-600 px-4 py-2 rounded-lg text-xs font-bold border border-indigo-100 hover:bg-indigo-50 transition-colors flex items-center gap-2 shadow-sm">
+                                                                <Upload className="h-4 w-4" /> Subir Archivos
+                                                                <input type="file" multiple className="hidden" onChange={handleFileAdd} />
+                                                            </label>
+                                                        </div>
+
+                                                        {files.length === 0 ? (
+                                                            <div className="text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-xl">
+                                                                Sin archivos adjuntos
+                                                            </div>
+                                                        ) : (
+                                                            <div className="space-y-2">
                                                                 {files.map(file => (
-                                                                    <motion.div
-                                                                        layout
-                                                                        initial={{ opacity: 0, y: 10 }}
-                                                                        animate={{ opacity: 1, y: 0 }}
-                                                                        exit={{ opacity: 0, scale: 0.95 }}
-                                                                        key={file.id}
-                                                                        className="w-full bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm relative group hover:shadow-md transition-all duration-200 flex items-start gap-3"
-                                                                    >
-                                                                        <div className="h-10 w-10 bg-slate-100 rounded flex items-center justify-center text-[10px] font-bold text-slate-600 uppercase shrink-0">
+                                                                    <div key={file.id} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                                                                        <div className="h-10 w-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
                                                                             {file.name.split('.').pop().substring(0, 3)}
                                                                         </div>
-
-                                                                        <div className="flex-1 min-w-0 flex flex-col gap-1">
-                                                                            <div className="text-xs font-bold text-slate-700 truncate pr-6">{file.name}</div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="text-sm font-bold text-slate-700 truncate">{file.name}</div>
                                                                             <input
-                                                                                type="text"
-                                                                                placeholder="Agregar nota (opcional)..."
-                                                                                className="w-full text-[11px] bg-slate-50 border-none rounded px-2 py-1 text-slate-600 focus:ring-1 focus:ring-primary/20 placeholder:text-slate-300"
-                                                                                value={file.note || ''}
-                                                                                onChange={(e) => updateFileNote(file.id, e.target.value)}
+                                                                                className="text-xs text-slate-500 bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-300 w-full"
+                                                                                placeholder="Añadir nota..."
+                                                                                value={file.note || ''} onChange={(e) => updateFileNote(file.id, e.target.value)}
                                                                             />
                                                                         </div>
-
-                                                                        <motion.button
-                                                                            onClick={() => removeFile(file.id)}
-                                                                            whileHover={{ scale: 1.1 }}
-                                                                            whileTap={{ scale: 0.9 }}
-                                                                            className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 transition-colors"
-                                                                        >
-                                                                            <X className="h-3.5 w-3.5" />
-                                                                        </motion.button>
-                                                                    </motion.div>
+                                                                        <button onClick={() => removeFile(file.id)} className="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                                                                            <X className="h-4 w-4" />
+                                                                        </button>
+                                                                    </div>
                                                                 ))}
-                                                            </AnimatePresence>
-                                                        </div>
-                                                    )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>
 
-                                {/* Footer Compacto con Animaciones de Botones */}
-                                <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center z-10 shrink-0 h-16">
-                                    <AnimatePresence>
-                                        {activeTab === 'medical' && (
-                                            <motion.div
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                exit={{ opacity: 0, x: -10 }}
-                                                transition={{ duration: 0.2 }}
-                                            >
-                                                <Button type="button" variant="ghost" onClick={() => setActiveTab('personal')} className="text-slate-500 hover:text-slate-800 hover:bg-slate-50 h-9 px-4 rounded-lg text-sm transition-all duration-200">
-                                                    <ArrowLeft className="mr-2 h-3 w-3" /> Atrás
-                                                </Button>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
+                                {/* Footer Actions */}
+                                <div className="p-6 md:px-12 border-t border-slate-100 bg-white z-10 flex justify-between items-center h-20">
+                                    {activeTab === 'medical' ? (
+                                        <Button variant="ghost" onClick={() => setActiveTab('personal')} className="text-slate-400 hover:text-slate-800 font-bold">
+                                            <ArrowLeft className="h-4 w-4 mr-2" /> Anterior
+                                        </Button>
+                                    ) : (
+                                        <div />
+                                    )}
 
-                                    <div className="ml-auto flex items-center gap-2">
-                                        <AnimatePresence mode="wait">
-                                            {activeTab === 'personal' ? (
-                                                <motion.div
-                                                    key="next-btn"
-                                                    initial={{ opacity: 0, scale: 0.9 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    exit={{ opacity: 0, scale: 0.9 }}
-                                                    transition={{ duration: 0.2 }}
-                                                >
-                                                    <Button type="button" onClick={() => setActiveTab('medical')} className="bg-primary hover:bg-primary/90 text-white rounded-xl h-10 px-6 shadow-lg shadow-primary/20 font-bold text-sm transition-all duration-200 active:scale-95">
-                                                        Siguiente paso
-                                                    </Button>
-                                                </motion.div>
-                                            ) : (
-                                                <motion.div
-                                                    key="save-btn"
-                                                    initial={{ opacity: 0, scale: 0.9 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    exit={{ opacity: 0, scale: 0.9 }}
-                                                    transition={{ duration: 0.2 }}
-                                                >
-                                                    <Button type="submit" className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 rounded-xl h-10 px-6 font-bold text-sm flex items-center transition-all duration-200 active:scale-95">
-                                                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                                                        {initialData ? 'Guardar Cambios' : 'Confirmar Alta'}
-                                                    </Button>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
+                                    <Button
+                                        type={activeTab === 'personal' ? 'button' : 'submit'}
+                                        onClick={activeTab === 'personal' ? () => setActiveTab('medical') : undefined}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-8 h-12 shadow-lg shadow-indigo-600/20 font-bold transition-all active:scale-95"
+                                    >
+                                        {activeTab === 'personal' ? 'Siguiente' : (initialData ? 'Guardar Cambios' : 'Crear Paciente')}
+                                        {activeTab === 'personal' && <ChevronRight className="h-4 w-4 ml-2" />}
+                                    </Button>
                                 </div>
                             </form>
                         </div>
@@ -519,4 +455,9 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
         </AnimatePresence>,
         document.body
     );
+}
+
+// Helper icon export
+function ChevronRight({ className }) {
+    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m9 18 6-6-6-6" /></svg>;
 }
