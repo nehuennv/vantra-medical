@@ -1,277 +1,333 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    X, Calendar, Clock, User, FileText, Activity,
-    History, Paperclip, ChevronRight, UploadCloud,
-    Stethoscope, FilePlus, AlertCircle, CheckCircle2
+    X, Calendar, User, FileText, Activity, History, Upload, Save,
+    CheckCircle2, Clock, AlertCircle, Loader2, Stethoscope, Scale, Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { fetchPatientFullData, saveConsultation } from '@/data/unifiedMockDB';
 import { cn } from '@/lib/utils';
-import { mockAppointmentData } from '@/data/mockAppointmentDetail';
 
-// --- SUB-COMPONENTS ---
-
-// 1. Overview Tab
-const OverviewTab = ({ details }) => (
-    <div className="space-y-6">
-        {/* Vitals Summary Card */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-                { label: 'Presión', value: details.vitals?.bp || '--/--', unit: 'mmHg', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-                { label: 'Frecuencia', value: details.vitals?.hr || '--', unit: 'bpm', color: 'text-rose-600', bg: 'bg-rose-50' },
-                { label: 'Peso', value: details.vitals?.weight || '--', unit: 'kg', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                { label: 'Altura', value: details.vitals?.height || '--', unit: 'cm', color: 'text-sky-600', bg: 'bg-sky-50' },
-            ].map((vital, i) => (
-                <div key={i} className={cn("p-4 rounded-2xl border border-slate-100 flex flex-col items-center justify-center gap-1", vital.bg)}>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{vital.label}</span>
-                    <div className="flex items-baseline gap-1">
-                        <span className={cn("text-xl font-black", vital.color)}>{vital.value}</span>
-                        <span className="text-[10px] font-bold text-slate-500">{vital.unit}</span>
-                    </div>
-                </div>
-            ))}
-        </div>
-
-        {/* Appointment Info */}
-        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/50 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4 text-slate-400" />
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">Motivo de Consulta</h3>
-            </div>
-            <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                {details.reason || "Sin motivo especificado."}
-            </p>
-            {details.notes && (
-                <div className="pt-4 mt-4 border-t border-slate-200">
-                    <p className="text-xs text-slate-400 font-bold mb-2">NOTAS PREVIAS</p>
-                    <p className="text-slate-500 text-sm italic">"{details.notes}"</p>
-                </div>
-            )}
-        </div>
-    </div>
-);
-
-// 2. History Tab (Timeline)
-const HistoryTab = ({ history }) => (
-    <div className="relative pl-4 space-y-8 before:absolute before:left-[19px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-100">
-        {history.map((item, idx) => (
-            <div key={idx} className="relative flex gap-4 group cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-all -ml-2">
-                {/* Dot */}
-                <div className={cn(
-                    "w-2.5 h-2.5 rounded-full mt-2 flex-shrink-0 z-10 border-2 border-white shadow-sm ring-1",
-                    idx === 0 ? "bg-indigo-500 ring-indigo-200" : "bg-slate-300 ring-slate-200"
-                )} />
-
-                <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                            {new Date(item.date).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
-                        <span className="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full border border-slate-200">
-                            {item.type}
-                        </span>
-                    </div>
-                    <h4 className="text-sm font-bold text-slate-800">{item.diagnosis}</h4>
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                        {item.notes}
-                    </p>
-                </div>
-            </div>
-        ))}
-        {history.length === 0 && (
-            <div className="text-center py-10 text-slate-400 text-sm">Sin historial previo.</div>
-        )}
-    </div>
-);
-
-// 3. Evolution Tab (Input)
-const EvolutionTab = () => (
-    <div className="h-full flex flex-col gap-4">
-        <textarea
-            className="flex-1 w-full bg-slate-50 rounded-2xl border border-slate-200 p-4 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all font-medium leading-relaxed"
-            placeholder="Escribir evolución médica aquí..."
-        ></textarea>
-        <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 border-slate-200 text-slate-600">
-                <FilePlus className="h-4 w-4 mr-2" /> Plantilla
-            </Button>
-            <Button className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200">
-                <CheckCircle2 className="h-4 w-4 mr-2" /> Guardar Evolución
-            </Button>
-        </div>
-    </div>
-);
-
-// 4. Files Tab
-const FilesTab = ({ files }) => (
-    <div className="space-y-6">
-        <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-indigo-400 hover:bg-indigo-50/10 hover:text-indigo-500 transition-all cursor-pointer group">
-            <div className="p-3 bg-slate-50 rounded-full group-hover:bg-indigo-100 transition-colors">
-                <UploadCloud className="h-6 w-6" />
-            </div>
-            <div className="text-center">
-                <p className="text-sm font-bold text-slate-600 group-hover:text-indigo-700">Click para subir o arrastrar</p>
-                <p className="text-xs mt-1">PDF, JPG, PNG (Max 10MB)</p>
-            </div>
-        </div>
-
-        <div className="space-y-2">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Archivos Adjuntos ({files.length})</h4>
-            {files.map((file, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl hover:shadow-sm transition-all group">
-                    <div className="p-2 bg-slate-100 rounded-lg text-slate-500">
-                        <Paperclip className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-700 truncate">{file.name}</p>
-                        <p className="text-[10px] text-slate-400">{file.size} • {file.date}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-            ))}
-        </div>
-    </div>
-);
-
-// --- MAIN COMPONENT ---
-
-export function AppointmentDetailModal({ booking, onClose }) {
-    const [activeTab, setActiveTab] = useState('overview');
-    const [details, setDetails] = useState(null);
+export function AppointmentDetailModal({ booking, isOpen, onClose }) {
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [data, setData] = useState(null); // Data completa (paciente + consulta)
+    const [activeTab, setActiveTab] = useState('evolution');
 
-    // Mock Fetch
+    // Estado local del formulario (lo que el médico escribe)
+    const [formState, setFormState] = useState({
+        evolution: '',
+        diagnosis: '',
+        vitals: { bloodPressure: '', weight: '', heartRate: '' }
+    });
+
+    // 1. Cargar datos al abrir
     useEffect(() => {
-        if (booking) {
+        if (isOpen && booking) {
             setLoading(true);
-            setTimeout(() => {
-                // Fetch mock details using booking ID (or just generic for now)
-                setDetails(mockAppointmentData(booking));
+            fetchPatientFullData(booking).then((response) => {
+                setData(response);
+                // Pre-llenar el formulario con lo que ya exista (si editamos)
+                setFormState({
+                    evolution: response.currentConsultation.evolution || '',
+                    diagnosis: response.currentConsultation.diagnosis || '',
+                    vitals: response.currentConsultation.vitals || { bloodPressure: '', weight: '', heartRate: '' }
+                });
                 setLoading(false);
-            }, 600); // Simulate network latency
+            });
         }
-    }, [booking]);
+    }, [isOpen, booking]);
 
-    if (!booking) return null;
+    // 2. Guardar datos
+    const handleSave = async () => {
+        setSaving(true);
+        await saveConsultation(booking.id, {
+            ...formState,
+            doctor: 'Dr. Vantra' // Hardcodeado por ahora
+        });
+        setSaving(false);
+        // Opcional: Mostrar toast de éxito
+    };
 
-    const tabs = [
-        { id: 'overview', label: 'Resumen', icon: Activity },
-        { id: 'history', label: 'Historia', icon: History },
-        { id: 'evolution', label: 'Evolución', icon: Stethoscope },
-        { id: 'files', label: 'Archivos', icon: Paperclip },
-    ];
+    if (!isOpen) return null;
 
     return (
         <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
-                onClick={onClose}
-            >
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
                 <motion.div
-                    initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                    className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl h-[85vh] overflow-hidden flex flex-col relative"
-                    onClick={e => e.stopPropagation()}
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    onClick={onClose} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+                />
+
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    className="bg-white w-full max-w-5xl h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative z-10"
                 >
-                    {/* LOADING STATE */}
-                    {loading ? (
-                        <div className="h-full flex flex-col items-center justify-center gap-4">
-                            <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
-                            <p className="text-sm font-bold text-slate-400 animate-pulse">Cargando Historia Clínica...</p>
-                        </div>
-                    ) : (
-                        <>
-                            {/* HEADER */}
-                            <div className="relative bg-slate-900 text-white p-8 overflow-hidden flex-shrink-0">
-                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-700 to-slate-900 opacity-90" />
+                    {/* --- CONTENIDO --- */}
+                    <div className="flex flex-1 overflow-hidden relative">
+                        {/* Close Button (Absolute) */}
+                        <button
+                            onClick={onClose}
+                            className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-50 text-slate-300 hover:text-slate-500 transition-all z-20"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
 
-                                {/* Top Controls */}
-                                <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20">
-                                    <div className="flex gap-2">
-                                        <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur text-[10px] font-bold border border-white/20 uppercase tracking-wider">
-                                            {details.status}
-                                        </span>
-                                        <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur text-[10px] font-bold border border-white/20">
-                                            {details.date} • {details.time}
-                                        </span>
+                        {/* Sidebar */}
+                        <div className="w-full md:w-[280px] bg-slate-50/80 backdrop-blur-xl border-r border-slate-100 flex flex-col shrink-0">
+                            {/* Profile Summary */}
+                            <div className="p-8 flex flex-col items-center text-center border-b border-slate-100/50">
+                                {loading ? (
+                                    <div className="flex flex-col items-center animate-pulse">
+                                        <div className="h-24 w-24 bg-slate-200 rounded-full mb-4" />
+                                        <div className="h-6 w-32 bg-slate-200 rounded mb-2" />
+                                        <div className="h-4 w-20 bg-slate-200 rounded" />
                                     </div>
-                                    <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors">
-                                        <X className="h-5 w-5" />
-                                    </button>
-                                </div>
-
-                                {/* Patient Profile */}
-                                <div className="relative z-10 flex items-end gap-6 pt-10">
-                                    <div className="w-24 h-24 rounded-2xl bg-white shadow-2xl flex items-center justify-center text-4xl font-black text-indigo-600 ring-4 ring-white/20">
-                                        {details.patient.name.charAt(0)}
-                                    </div>
-                                    <div className="pb-1 space-y-1">
-                                        <h2 className="text-3xl font-bold leading-none">{details.patient.name}</h2>
-                                        <div className="flex items-center gap-3 text-indigo-100 font-medium text-sm">
-                                            <span>{details.patient.age} años</span>
-                                            <span>•</span>
-                                            <span>{details.patient.gender}</span>
-                                            <span>•</span>
-                                            <span className="opacity-80">{details.patient.id}</span>
+                                ) : (
+                                    <>
+                                        <div className="h-24 w-24 rounded-full bg-white flex items-center justify-center text-3xl font-bold text-indigo-600 shadow-lg ring-4 ring-white mb-4">
+                                            {data?.patient.name.charAt(0)}
                                         </div>
-                                    </div>
+                                        <h2 className="text-xl font-bold text-slate-800 leading-tight mb-2">
+                                            {data?.patient.name}
+                                        </h2>
+                                        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">
+                                            <span className="flex items-center gap-1"><User className="h-3 w-3" /> {data?.patient.age} Años</span>
+                                            <span className="text-slate-300">•</span>
+                                            <span className="flex items-center gap-1">{data?.patient.bloodType || 'S/D'}</span>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Appointment Info */}
+                            <div className="px-6 py-4 border-b border-slate-100/50 bg-slate-50/50 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Fecha</span>
+                                    <span className="text-xs font-bold text-slate-700">
+                                        {new Date(booking.startTime).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Hora</span>
+                                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                                        <Clock className="h-3 w-3 text-slate-400" />
+                                        {new Date(booking.startTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Estado</span>
+                                    <span className={cn(
+                                        "text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase",
+                                        booking.status === 'ACCEPTED' ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
+                                            booking.status === 'IN_PROGRESS' ? "bg-indigo-50 text-indigo-700 border-indigo-100" :
+                                                "bg-amber-50 text-amber-700 border-amber-100"
+                                    )}>
+                                        {booking.status === 'ACCEPTED' ? 'Confirmado' : booking.status === 'IN_PROGRESS' ? 'En Curso' : 'Pendiente'}
+                                    </span>
                                 </div>
                             </div>
 
-                            {/* TABS HEADER */}
-                            <div className="flex items-center px-8 border-b border-slate-200 bg-white sticky top-0 z-10">
-                                {tabs.map(tab => (
+                            {/* Navigation */}
+                            <div className="p-4 flex flex-col gap-1 overflow-y-auto">
+                                {[
+                                    { id: 'evolution', label: 'Evolución', icon: FileText },
+                                    { id: 'history', label: 'Historial', icon: History },
+                                    { id: 'files', label: 'Archivos', icon: Upload },
+                                ].map(tab => (
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={cn(
-                                            "flex items-center gap-2 px-6 py-4 text-xs font-bold uppercase tracking-wider transition-all border-b-[3px]",
+                                            "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all",
                                             activeTab === tab.id
-                                                ? "border-indigo-600 text-indigo-700 bg-indigo-50/30"
-                                                : "border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                                                ? "bg-white text-indigo-600 shadow-sm ring-1 ring-slate-100"
+                                                : "text-slate-500 hover:bg-white/50 hover:text-slate-700"
                                         )}
                                     >
-                                        <tab.icon className="h-4 w-4" />
+                                        <tab.icon className={cn("h-4 w-4", activeTab === tab.id ? "text-indigo-600" : "text-slate-400")} />
                                         {tab.label}
                                     </button>
                                 ))}
                             </div>
+                        </div>
 
-                            {/* BODY CONTENT */}
-                            <div className="flex-1 overflow-y-auto p-8 bg-white custom-scrollbar">
-                                <motion.div
-                                    key={activeTab}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="h-full"
-                                >
-                                    {activeTab === 'overview' && <OverviewTab details={details} />}
-                                    {activeTab === 'history' && <HistoryTab history={details.history} />}
-                                    {activeTab === 'evolution' && <EvolutionTab />}
-                                    {activeTab === 'files' && <FilesTab files={details.files} />}
-                                </motion.div>
-                            </div>
+                        {/* Main Panel */}
+                        <div className="flex-1 bg-white p-8 overflow-y-auto custom-scrollbar">
+                            {loading ? (
+                                <div className="h-full flex items-center justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                                </div>
+                            ) : (
+                                <>
+                                    {/* TAB: EVOLUCIÓN (INPUTS REALES) */}
+                                    {activeTab === 'evolution' && (
+                                        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
 
-                            {/* FOOTER ACTIONS */}
-                            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 flex-shrink-0">
-                                {activeTab !== 'evolution' && (
-                                    <Button variant="ghost" className="text-slate-500 hover:text-slate-700">
-                                        Cancelar
-                                    </Button>
-                                )}
-                                <Button className="bg-slate-900 text-white font-bold px-8 shadow-xl shadow-slate-200 hover:scale-105 transition-transform">
-                                    {activeTab === 'evolution' ? 'Finalizar Consulta' : 'Guardar Cambios'}
-                                </Button>
-                            </div>
-                        </>
-                    )}
+                                            {/* 1. Signos Vitales (Grid de Inputs) */}
+                                            <section className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+                                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                    <Activity className="h-4 w-4" /> Signos Vitales de Hoy
+                                                </h4>
+                                                <div className="grid grid-cols-3 gap-6">
+                                                    <div className="space-y-1">
+                                                        <label className="text-sm font-semibold text-slate-700">Presión (mmHg)</label>
+                                                        <div className="relative">
+                                                            <Stethoscope className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                                            <input
+                                                                value={formState.vitals.bloodPressure}
+                                                                onChange={(e) => setFormState(prev => ({ ...prev, vitals: { ...prev.vitals, bloodPressure: e.target.value } }))}
+                                                                placeholder="120/80"
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-sm font-semibold text-slate-700">Peso (kg)</label>
+                                                        <div className="relative">
+                                                            <Scale className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                                            <input
+                                                                value={formState.vitals.weight}
+                                                                onChange={(e) => setFormState(prev => ({ ...prev, vitals: { ...prev.vitals, weight: e.target.value } }))}
+                                                                placeholder="70.5"
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-sm font-semibold text-slate-700">Frec. Cardíaca</label>
+                                                        <div className="relative">
+                                                            <Heart className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                                            <input
+                                                                value={formState.vitals.heartRate}
+                                                                onChange={(e) => setFormState(prev => ({ ...prev, vitals: { ...prev.vitals, heartRate: e.target.value } }))}
+                                                                placeholder="75 bpm"
+                                                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </section>
+
+                                            {/* 2. Diagnóstico y Evolución */}
+                                            <section className="space-y-4">
+                                                <div>
+                                                    <label className="text-sm font-bold text-slate-700 block mb-2">Diagnóstico Presuntivo</label>
+                                                    <input
+                                                        value={formState.diagnosis}
+                                                        onChange={(e) => setFormState(prev => ({ ...prev, diagnosis: e.target.value }))}
+                                                        placeholder="Ej: Gripe estacional"
+                                                        className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none font-medium"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm font-bold text-slate-700 block mb-2">Notas de Evolución</label>
+                                                    <textarea
+                                                        value={formState.evolution}
+                                                        onChange={(e) => setFormState(prev => ({ ...prev, evolution: e.target.value }))}
+                                                        placeholder="Describa el cuadro clínico, tratamiento indicado, observaciones..."
+                                                        className="w-full h-40 p-4 rounded-xl border border-slate-200 text-sm leading-relaxed resize-none focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                                    />
+                                                </div>
+                                            </section>
+
+                                            {/* Footer Acciones */}
+                                            <div className="pt-6 border-t border-slate-100 flex justify-end gap-3">
+                                                <span className="text-xs text-slate-400 self-center italic mr-auto">
+                                                    Los cambios se guardan localmente para el MVP
+                                                </span>
+                                                <Button variant="outline" onClick={onClose}>Cancelar</Button>
+                                                <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[140px]">
+                                                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4 mr-2" /> Guardar Ficha</>}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* TAB: HISTORIAL (Lectura) */}
+                                    {activeTab === 'history' && (
+                                        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-lg font-bold text-slate-800">Línea de Tiempo</h3>
+                                                <span className="text-xs font-bold bg-slate-100 px-2 py-1 rounded-md text-slate-500">
+                                                    {data.history.length} visitas previas
+                                                </span>
+                                            </div>
+
+                                            <div className="relative pl-8 border-l-2 border-slate-100 space-y-8">
+                                                {data.history.length === 0 ? (
+                                                    <p className="text-slate-400 text-sm italic">No hay historial previo para este paciente.</p>
+                                                ) : data.history.map((evt) => (
+                                                    <div key={evt.id} className="relative group">
+                                                        <div className="absolute -left-[39px] top-1 h-5 w-5 rounded-full border-4 border-white bg-slate-300 group-hover:bg-indigo-500 transition-colors shadow-sm" />
+                                                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                                                            <div className="flex justify-between mb-2">
+                                                                <span className="font-bold text-slate-700">{evt.diagnosis || 'Consulta General'}</span>
+                                                                <span className="text-xs text-slate-400">{new Date(evt.date).toLocaleDateString()}</span>
+                                                            </div>
+                                                            <p className="text-sm text-slate-600 mb-3">{evt.evolution}</p>
+                                                            {evt.vitals && (
+                                                                <div className="flex gap-3 mt-3 pt-3 border-t border-slate-200/50">
+                                                                    {evt.vitals.bloodPressure && <span className="text-xs bg-white px-2 py-1 rounded border text-slate-500">TA: {evt.vitals.bloodPressure}</span>}
+                                                                    {evt.vitals.weight && <span className="text-xs bg-white px-2 py-1 rounded border text-slate-500">{evt.vitals.weight} kg</span>}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* TAB: ARCHIVOS */}
+                                    {activeTab === 'files' && (
+                                        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                                            <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+                                                <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
+                                                    <Upload className="h-4 w-4 text-blue-600" />
+                                                </div>
+                                                <h3 className="text-lg font-bold text-slate-800">Archivos Adjuntos</h3>
+                                            </div>
+
+                                            {/* Upload Zone */}
+                                            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-indigo-400 hover:bg-indigo-50/10 hover:text-indigo-500 transition-all cursor-pointer group bg-slate-50/50">
+                                                <div className="p-4 bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                                                    <Upload className="h-6 w-6" />
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-sm font-bold text-slate-700 group-hover:text-indigo-700">Click para subir o arrastrar</p>
+                                                    <p className="text-xs mt-1">PDF, JPG, PNG (Max 10MB)</p>
+                                                </div>
+                                            </div>
+
+                                            {/* File List */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {data.files && data.files.length > 0 ? (
+                                                    data.files.map((file, i) => (
+                                                        <div key={i} className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl hover:shadow-md transition-all group cursor-pointer">
+                                                            <div className="h-10 w-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500">
+                                                                <FileText className="h-5 w-5" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-bold text-slate-700 truncate">{file.name}</p>
+                                                                <p className="text-[10px] text-slate-400">{file.size} • {file.date}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-slate-400 text-sm italic col-span-full text-center py-4">No hay archivos adjuntos aún.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </motion.div>
-            </motion.div>
+            </div>
         </AnimatePresence>
     );
 }

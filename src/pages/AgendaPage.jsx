@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search,
-    LayoutList, Kanban, FilterX, Clock, CheckCircle2, XCircle,
+    LayoutList, Kanban, FilterX, Clock, CheckCircle2, XCircle, CalendarX, Plus,
     MoreHorizontal, User, FileText, Phone, ArrowRight, Activity
 } from 'lucide-react';
 import { DndContext, useDraggable, useDroppable, DragOverlay, useSensor, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
@@ -193,7 +193,8 @@ export function AgendaPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeDragId, setActiveDragId] = useState(null);
-    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [selectedBookingForModal, setSelectedBookingForModal] = useState(null);
 
     // Sensores
     const sensors = useSensors(
@@ -267,7 +268,10 @@ export function AgendaPage() {
         }
     };
 
-    const handleViewDetails = (booking) => setSelectedBooking(booking);
+    const handleOpenDetail = (booking) => {
+        setSelectedBookingForModal(booking);
+        setDetailModalOpen(true);
+    };
 
     const navigateDate = (days) => {
         const date = new Date(currentDate);
@@ -329,7 +333,21 @@ export function AgendaPage() {
 
             {/* CONTENT AREA */}
             <div className="flex-1 min-h-0 relative">
-                {view === 'kanban' ? (
+                {!loading && bookings.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in-95 duration-500">
+                        <div className="h-40 w-40 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
+                            <CalendarX className="h-16 w-16 text-slate-300" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-800 mb-2">Día Libre</h3>
+                        <p className="text-slate-500 max-w-md text-center mb-8">
+                            No hay turnos programados para el <span className="font-bold text-slate-700">{currentDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric' })}</span>.
+                        </p>
+                        <Button className="bg-indigo-600 text-white font-bold shadow-xl shadow-indigo-200 hover:scale-105 transition-all">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Nuevo Turno
+                        </Button>
+                    </div>
+                ) : view === 'kanban' ? (
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCorners}
@@ -359,7 +377,7 @@ export function AgendaPage() {
                                         filteredBookings
                                             .filter(b => b.status === column.id)
                                             .map(b => (
-                                                <AppointmentCard key={b.id} booking={b} onViewDetails={() => handleViewDetails(b)} />
+                                                <AppointmentCard key={b.id} booking={b} onViewDetails={() => handleOpenDetail(b)} />
                                             ))
                                     )}
                                 </KanbanColumn>
@@ -395,7 +413,7 @@ export function AgendaPage() {
                                 return (
                                     <motion.div
                                         key={booking.id}
-                                        onClick={() => handleViewDetails(booking)}
+                                        onClick={() => handleOpenDetail(booking)}
                                         initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                                         whileHover={{ backgroundColor: 'rgba(248, 250, 252, 0.8)' }}
                                         className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-slate-50 hover:border-slate-100 transition-all cursor-pointer items-center rounded-xl group"
@@ -454,7 +472,11 @@ export function AgendaPage() {
                 )}
             </div>
 
-            <AppointmentDetailModal booking={selectedBooking} onClose={() => setSelectedBooking(null)} />
+            <AppointmentDetailModal
+                isOpen={detailModalOpen}
+                booking={selectedBookingForModal}
+                onClose={() => setDetailModalOpen(false)}
+            />
         </div>
     );
 }
