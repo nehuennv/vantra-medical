@@ -12,15 +12,18 @@ export function TopBar() {
                 </span>
             </div>
 
-            {/* Right: Doctor Profile */}
-            <div className="flex items-center gap-3">
-                <div className="text-right hidden sm:block">
-                    <p className="text-sm font-bold text-slate-700">Dr. Villavicencio</p>
-                    <p className="text-xs text-slate-500">Cardiología</p>
-                </div>
-                <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20 shadow-sm">
-                    DV
-                </div>
+            {/* Right: Global Actions */}
+            <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary rounded-full">
+                    <Search className="h-5 w-5" />
+                </Button>
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary rounded-full relative">
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute top-2.5 right-2.5 h-2 w-2 bg-rose-500 rounded-full border-2 border-white"></span>
+                </Button>
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-primary rounded-full hidden sm:flex">
+                    <HelpCircle className="h-5 w-5" />
+                </Button>
             </div>
         </header>
     );

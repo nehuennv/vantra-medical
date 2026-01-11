@@ -28,7 +28,7 @@ const PatientRow = React.memo(({ patient, onClick }) => {
                 }
             }}
             // CSS Native Transition for Hover - Zero Lag
-            className="group transition-colors duration-150 cursor-pointer hover:bg-white/60 border-b border-indigo-100/40 last:border-none focus:outline-none focus:bg-white/60 focus:ring-2 focus:ring-inset focus:ring-primary/20"
+            className="group transition-colors duration-200 cursor-pointer hover:bg-slate-100 border-b border-indigo-100/40 last:border-none focus:outline-none focus:bg-slate-50 focus:ring-2 focus:ring-inset focus:ring-primary/20"
         >
             {/* Paciente */}
             <td className="px-6 py-4 pl-8">

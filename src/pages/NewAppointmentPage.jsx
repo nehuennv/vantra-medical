@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, UserPlus, Clock, ChevronRight, User, Check, ArrowLeft, Calendar as CalendarIcon, Loader2, CalendarX, Stethoscope, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,11 +8,22 @@ import { CreatePatientModal } from '@/components/patients/CreatePatientModal';
 import { cn } from '@/lib/utils';
 import { calComService } from '@/services/calComService';
 
-export function NewAppointmentPage({ onNavigate }) {
+export function NewAppointmentPage() {
     const [step, setStep] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Check for pre-selected patient or date from navigation
+    useEffect(() => {
+        if (location.state?.patient) {
+            setSelectedPatient(location.state.patient);
+            setStep(2);
+        }
+        // Store date preference for Step 2
+    }, [location.state]);
 
     // Form
     const [selectedDateKey, setSelectedDateKey] = useState(null);
@@ -24,25 +36,42 @@ export function NewAppointmentPage({ onNavigate }) {
     const [slotsError, setSlotsError] = useState(false);
     const [isBooking, setIsBooking] = useState(false);
 
+    // Calendar State
+    const [viewMonth, setViewMonth] = useState(new Date());
+
+    useEffect(() => {
+        if (location.state?.preSelectedDate) {
+            const preDate = new Date(location.state.preSelectedDate);
+            setViewMonth(preDate);
+            // The actual selection is handled in loadSlots priority logic
+        }
+    }, [location.state]);
+
     useEffect(() => {
         if (step === 2) loadSlots();
-    }, [step]);
+    }, [step, viewMonth]); // Reload when step or month changes
 
     const loadSlots = async () => {
         setIsLoadingSlots(true);
         setSlotsError(false);
-        const today = new Date();
-        const twoWeeksLater = new Date();
-        twoWeeksLater.setDate(today.getDate() + 14);
+
+        // Calculate start and end of viewMonth
+        const startOfMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
+        const endOfMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0);
 
         try {
-            const slots = await calComService.getAvailableSlots(today, twoWeeksLater);
+            const slots = await calComService.getAvailableSlots(startOfMonth, endOfMonth);
             setAvailableSlots(slots);
-            const dates = Object.keys(slots);
-            if (dates.length > 0) setSelectedDateKey(dates[0]);
-            else setSlotsError(true);
+
+            // Handle Pre-selection priority (only if not already set by user interaction)
+            if (location.state?.preSelectedDate && !selectedDateKey) {
+                const preDateKey = new Date(location.state.preSelectedDate).toISOString().split('T')[0];
+                if (slots[preDateKey] || new Date(location.state.preSelectedDate).getMonth() === viewMonth.getMonth()) {
+                    setSelectedDateKey(preDateKey);
+                }
+            }
         } catch (error) {
-            console.warn("Slots fetch error, using fallback UI");
+            console.warn("Slots fetch error", error);
             setSlotsError(true);
         } finally {
             setIsLoadingSlots(false);
@@ -52,7 +81,6 @@ export function NewAppointmentPage({ onNavigate }) {
     const handleConfirmAppointment = async () => {
         setIsBooking(true);
         try {
-            // Reconstruct ISO date locally
             const dateTimeStr = `${selectedDateKey} ${selectedTime}`;
             await calComService.createBooking({
                 name: selectedPatient.name,
@@ -68,7 +96,25 @@ export function NewAppointmentPage({ onNavigate }) {
         }
     };
 
-    const availableDates = Object.keys(availableSlots);
+    // Calendar Helpers
+    const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const getFirstDayOfMonth = (date) => {
+        const day = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+        return day === 0 ? 6 : day - 1; // Adjust for Monday start (0=Mon, 6=Sun) or standard (0=Sun)
+        // Standard JS: 0=Sun, 1=Mon. Let's assume standard Sunday start for simplicity or adjust to UI preference.
+        // Let's use Monday start for Argentina locale if possible, but Sunday is easier standard. 
+        // Sunday=0.
+        return day;
+    };
+
+    const changeMonth = (offset) => {
+        const newDate = new Date(viewMonth);
+        newDate.setMonth(newDate.getMonth() + offset);
+        setViewMonth(newDate);
+        // Optional: clear selection if changing month? No, keep it.
+    };
+
+    const weekDays = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'];
 
     // Animation Variants
     const fadeVariant = {
@@ -78,14 +124,14 @@ export function NewAppointmentPage({ onNavigate }) {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50/50 p-6 lg:p-10 font-sans pb-32">
+        <div className="min-h-screen bg-slate-50/50 p-6 lg:px-10 pt-0 font-sans pb-32">
             <div className="max-w-6xl mx-auto space-y-8">
 
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Nuevo Turno</h1>
-                        <p className="text-slate-500 mt-1">Gestión de citas y disponibilidad.</p>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Nuevo Turno</h1>
+                        <p className="text-sm text-slate-500 font-medium">Gestión de citas y disponibilidad.</p>
                     </div>
                     {step > 1 && step < 3 && (
                         <Button variant="ghost" onClick={() => setStep(step - 1)} className="text-slate-500 hover:text-slate-800 hover:bg-white/50">
@@ -230,99 +276,150 @@ export function NewAppointmentPage({ onNavigate }) {
                                     </div>
                                 </div>
 
-                                {/* Right Panel: Calendar */}
-                                <div className="w-full lg:w-2/3 p-8 lg:p-10 flex flex-col">
-                                    <div className="flex items-center justify-between mb-6">
-                                        <h2 className="text-xl font-bold text-slate-800">Seleccionar Horario</h2>
-                                        {isLoadingSlots && (
-                                            <div className="flex items-center gap-2 text-indigo-600 text-xs font-bold bg-indigo-50 px-3 py-1.5 rounded-full">
-                                                <Loader2 className="h-3.5 w-3.5 animate-spin" /> SINCRONIZANDO
-                                            </div>
-                                        )}
-                                    </div>
+                                {/* Right Panel: Calendar & Time */}
+                                <div className="w-full lg:w-2/3 flex flex-col h-full bg-white relative">
+                                    <div className="p-8 lg:p-10 flex-1 overflow-y-auto custom-scrollbar">
 
-                                    {isLoadingSlots ? (
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
-                                            {[...Array(8)].map((_, i) => (
-                                                <div key={i} className="h-16 bg-slate-100 rounded-xl" />
-                                            ))}
+                                        {/* Header Calendar */}
+                                        <div className="flex items-center justify-between mb-8">
+                                            <div>
+                                                <h2 className="text-xl font-bold text-slate-800">Fecha y Hora</h2>
+                                                <p className="text-sm text-slate-400 font-medium">Seleccione el momento ideal.</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                                                <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-slate-500 hover:text-indigo-600">
+                                                    <ChevronRight className="h-4 w-4 rotate-180" />
+                                                </button>
+                                                <span className="text-sm font-bold text-slate-700 w-32 text-center capitalize select-none">
+                                                    {viewMonth.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
+                                                </span>
+                                                <button onClick={() => changeMonth(1)} className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-slate-500 hover:text-indigo-600">
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         </div>
-                                    ) : slotsError ? (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                                            <CalendarX className="h-10 w-10 text-slate-300 mb-3" />
-                                            <p className="text-slate-500 font-medium max-w-xs">No encontramos horarios disponibles en esta fecha. Intente nuevamente más tarde.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col h-full gap-6">
-                                            {/* Date Scroller */}
-                                            <div className="flex gap-3 overflow-x-auto pb-4 custom-scrollbar snap-x">
-                                                {availableDates.map(dateKey => {
-                                                    const isActive = selectedDateKey === dateKey;
-                                                    const dateObj = new Date(dateKey); // Simplified parse
+
+                                        {/* Calendar Grid */}
+                                        <div className="mb-10">
+                                            <div className="grid grid-cols-7 mb-4">
+                                                {weekDays.map(day => (
+                                                    <div key={day} className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">{day}</div>
+                                                ))}
+                                            </div>
+                                            <div className="grid grid-cols-7 gap-y-4 gap-x-2">
+                                                {Array.from({ length: getFirstDayOfMonth(viewMonth) }).map((_, i) => (
+                                                    <div key={`empty-${i}`} />
+                                                ))}
+                                                {Array.from({ length: getDaysInMonth(viewMonth) }).map((_, i) => {
+                                                    const day = i + 1;
+                                                    const date = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
+                                                    const dateKey = date.toISOString().split('T')[0];
+                                                    const isSelected = selectedDateKey === dateKey;
+                                                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+                                                    // Mock availability check (if we had full month map)
+                                                    // Since we fetch slots for range, we check if slots[dateKey] exists
+                                                    const hasSlots = availableSlots[dateKey] && availableSlots[dateKey].length > 0;
+
                                                     return (
-                                                        <button
-                                                            key={dateKey}
-                                                            onClick={() => { setSelectedDateKey(dateKey); setSelectedTime(null); }}
-                                                            className={cn(
-                                                                "snap-start flex-shrink-0 flex flex-col items-center justify-center w-20 h-24 rounded-2xl border transition-all duration-300",
-                                                                isActive
-                                                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20 transform scale-105"
-                                                                    : "bg-white border-slate-100 text-slate-500 hover:border-indigo-200 hover:text-indigo-600"
-                                                            )}
-                                                        >
-                                                            <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">
-                                                                {dateObj.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')}
-                                                            </span>
-                                                            <span className="text-2xl font-bold my-1">
-                                                                {dateObj.getDate()}
-                                                            </span>
-                                                            <span className="text-[10px] opacity-60 lowercase">
-                                                                {dateObj.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '')}
-                                                            </span>
-                                                        </button>
+                                                        <div key={day} className="flex justify-center">
+                                                            <button
+                                                                onClick={() => { if (!isPast) { setSelectedDateKey(dateKey); setSelectedTime(null); } }}
+                                                                disabled={isPast}
+                                                                className={cn(
+                                                                    "h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center text-sm font-bold transition-all relative",
+                                                                    isSelected
+                                                                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 ring-2 ring-indigo-100"
+                                                                        : isPast
+                                                                            ? "text-slate-300 cursor-not-allowed"
+                                                                            : "text-slate-700 hover:bg-slate-50 hover:text-indigo-600",
+                                                                    hasSlots && !isSelected && !isPast && "ring-1 ring-slate-200 bg-slate-50/50"
+                                                                )}
+                                                            >
+                                                                {day}
+                                                                {hasSlots && !isSelected && (
+                                                                    <div className="absolute bottom-1.5 w-1 h-1 bg-indigo-500 rounded-full" />
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     );
                                                 })}
                                             </div>
+                                        </div>
 
-                                            {/* Time Grid */}
-                                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start">
-                                                    {selectedDateKey && availableSlots[selectedDateKey]?.map((time, idx) => (
-                                                        <motion.button
-                                                            key={`${selectedDateKey}-${time}`}
-                                                            initial={{ opacity: 0, scale: 0.9 }}
-                                                            animate={{ opacity: 1, scale: 1 }}
-                                                            transition={{ delay: idx * 0.03 }}
-                                                            onClick={() => setSelectedTime(time)}
-                                                            className={cn(
-                                                                "py-3 rounded-xl text-sm font-bold border transition-all relative overflow-hidden group",
-                                                                selectedTime === time
-                                                                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-600/30 ring-2 ring-offset-2 ring-indigo-600"
-                                                                    : "bg-white border-slate-200 text-slate-600 hover:border-indigo-400 hover:text-indigo-600"
-                                                            )}
-                                                        >
-                                                            {time}
-                                                        </motion.button>
-                                                    ))}
+                                        {/* Time Selection */}
+                                        <div className="space-y-4">
+                                            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                                <Clock className="h-4 w-4 text-indigo-500" />
+                                                Horarios Disponibles
+                                            </h3>
+
+                                            {selectedDateKey ? (
+                                                isLoadingSlots ? (
+                                                    <div className="flex items-center gap-3 text-slate-400 text-sm py-4">
+                                                        <Loader2 className="h-4 w-4 animate-spin" /> Verificando disponibilidad...
+                                                    </div>
+                                                ) : availableSlots[selectedDateKey]?.length > 0 ? (
+                                                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                                                        {availableSlots[selectedDateKey].map((time, idx) => (
+                                                            <motion.button
+                                                                key={`${selectedDateKey}-${time}`}
+                                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                                animate={{ opacity: 1, scale: 1 }}
+                                                                transition={{ delay: idx * 0.02 }}
+                                                                onClick={() => setSelectedTime(time)}
+                                                                className={cn(
+                                                                    "py-2.5 px-2 rounded-xl text-sm font-bold border transition-all text-center", // Removed overflow-hidden
+                                                                    selectedTime === time
+                                                                        ? "bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20 ring-2 ring-indigo-200 ring-offset-1"
+                                                                        : "bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 hover:shadow-sm"
+                                                                )}
+                                                            >
+                                                                {time}
+                                                            </motion.button>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-sm text-slate-400 italic py-2 bg-slate-50 rounded-xl p-4 border border-slate-100 text-center">
+                                                        No hay horarios para esta fecha.
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <div className="text-sm text-slate-400 italic py-6 text-center border-2 border-dashed border-slate-100 rounded-2xl">
+                                                    Seleccione un día en el calendario para ver horarios.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Footer Action */}
+                                    <div className="p-6 border-t border-slate-100 bg-white z-10">
+                                        <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">RESUMEN</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    {selectedDateKey ? (
+                                                        <span className="font-bold text-slate-800 text-sm">
+                                                            {new Date(selectedDateKey).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
+                                                            {selectedTime && ` • ${selectedTime} hs`}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-sm font-medium text-slate-400 italic">Incompleto</span>
+                                                    )}
                                                 </div>
                                             </div>
-
-                                            {/* Actions */}
-                                            <div className="pt-6 mt-auto border-t border-slate-100 flex justify-end">
-                                                <Button
-                                                    onClick={handleConfirmAppointment}
-                                                    disabled={!selectedTime || isBooking}
-                                                    className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-base font-bold shadow-xl shadow-indigo-600/20 w-full sm:w-auto transition-all active:scale-95"
-                                                >
-                                                    {isBooking ? (
-                                                        <span className="flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> Confirmando...</span>
-                                                    ) : (
-                                                        "Confirmar Turno"
-                                                    )}
-                                                </Button>
-                                            </div>
+                                            <Button
+                                                onClick={handleConfirmAppointment}
+                                                disabled={!selectedTime || isBooking}
+                                                className="h-12 px-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:shadow-none"
+                                            >
+                                                {isBooking ? (
+                                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                                ) : (
+                                                    "Confirmar Turno"
+                                                )}
+                                            </Button>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
@@ -353,10 +450,10 @@ export function NewAppointmentPage({ onNavigate }) {
                                         Nuevo Turno
                                     </Button>
                                     <Button
-                                        onClick={() => onNavigate && onNavigate('dashboard')}
+                                        onClick={() => navigate('/agenda')}
                                         className="h-12 px-8 rounded-xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700"
                                     >
-                                        Ir al Inicio
+                                        Ir a Agenda
                                     </Button>
                                 </div>
                             </motion.div>

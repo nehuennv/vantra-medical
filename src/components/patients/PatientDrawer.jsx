@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { X, Calendar, MessageCircle, FileText, User, Phone, Mail, Clock, Activity, History, Pill, UploadCloud, Stethoscope, ArrowLeft, Download, FileIcon, Trash2, MoreHorizontal, Pencil, Eye, File as LucideFile } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { useScrollLock } from "@/hooks/useScrollLock";
 
 export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
     useScrollLock(!!patient);
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('info');
     const [showMenu, setShowMenu] = useState(false);
     const [previewFile, setPreviewFile] = useState(null);
@@ -190,7 +192,14 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
 
                             {/* Sidebar Footer Actions */}
                             <div className="p-4 bg-white/50 backdrop-blur-sm border-t border-slate-100 relative z-30 flex flex-col gap-3">
-                                <Button className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 rounded-xl font-bold text-xs h-11 transition-all duration-300 active:scale-95 group border border-transparent">
+                                <Button
+                                    onClick={() => {
+                                        onClose();
+                                        setTimeout(() => {
+                                            navigate('/nuevo-turno', { state: { patient } });
+                                        }, 300);
+                                    }}
+                                    className="w-full bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 rounded-xl font-bold text-xs h-11 transition-all duration-300 active:scale-95 group border border-transparent">
                                     <Calendar className="h-4 w-4 mr-2 group-hover:animate-pulse text-white/90" />
                                     Agendar Turno
                                 </Button>
@@ -405,7 +414,7 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                                                         )}></div>
 
                                                         <div
-                                                            className="flex flex-col bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 cursor-pointer transition-all duration-300 relative group/card"
+                                                            className="flex flex-col bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-primary/30 cursor-pointer transition-all duration-300 relative group/card"
                                                         >
                                                             {/* Hover Action Overlay */}
                                                             <div className="absolute inset-0 bg-white/90 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10 rounded-2xl">
@@ -424,7 +433,7 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                                                                 </div>
                                                                 <span className={cn(
                                                                     "text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide",
-                                                                    event.type === 'Consulta' ? "bg-indigo-50 text-indigo-600" :
+                                                                    event.type === 'Consulta' ? "bg-primary/10 text-primary" :
                                                                         event.type === 'Urgencia' ? "bg-red-50 text-red-600" :
                                                                             "bg-slate-100 text-slate-600"
                                                                 )}>
@@ -547,7 +556,7 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                                             {/* Header */}
                                             <div className="p-5 border-b border-slate-100 flex items-start justify-between">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-primary shrink-0">
+                                                    <div className="h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0">
                                                         <FileText className="h-5 w-5" />
                                                     </div>
                                                     <div className="min-w-0">
@@ -601,7 +610,7 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                                             <div className="p-5 border-t border-slate-100 bg-slate-50/30">
                                                 <Button
                                                     onClick={() => downloadFile(previewFile)}
-                                                    className="w-full bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/10 rounded-xl h-11 transition-all duration-300"
+                                                    className="w-full bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 rounded-xl h-11 transition-all duration-300"
                                                 >
                                                     <Download className="h-4 w-4 mr-2" />
                                                     Descargar Original

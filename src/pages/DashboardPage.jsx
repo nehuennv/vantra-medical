@@ -8,11 +8,12 @@ import { SourcesWidget, RetentionWidget, DemandPeaksWidget } from "@/components/
 import { clientConfig } from "@/config/client";
 import { motion } from "framer-motion";
 import { parseKpiValue } from "@/lib/utils";
-import { calComService } from "@/services/calComService";
+import { useNavigate } from 'react-router-dom';
 
-export function DashboardPage({ onNavigate }) {
+export function DashboardPage() {
     const { identity, business, theme, mockData } = clientConfig;
     const [appointments, setAppointments] = useState([]);
+    const navigate = useNavigate();
 
     // Fetch real appointments for dashboard
     useEffect(() => {
@@ -88,7 +89,7 @@ export function DashboardPage({ onNavigate }) {
                 {/* ACCION PRINCIPAL */}
                 <div className="flex gap-2">
                     <Button
-                        onClick={() => onNavigate && onNavigate('new-appointment')}
+                        onClick={() => navigate('/nuevo-turno')}
                         className="h-10 px-6 rounded-xl shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white font-bold w-full sm:w-auto transform hover:scale-105 transition-transform duration-200"
                     >
                         <Plus className="h-4 w-4 mr-2" />

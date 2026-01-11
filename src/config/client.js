@@ -15,7 +15,7 @@ export const clientConfig = {
     theme: {
         primary: "#0ea5e9", // Sky-500
         chartPrimary: "#0ea5e9",
-        chartSecondary: "#6366f1",
+        chartSecondary: "#0ea5e9",
     },
     mockData: {
         // SECCION 1: KPIS MACRO

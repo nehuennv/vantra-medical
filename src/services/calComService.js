@@ -101,7 +101,7 @@ export const calComService = {
         while (cursor <= loopEnd) {
             const day = cursor.getDay();
             if (day !== 0 && day !== 6) {
-                const dateKey = cursor.toDateString();
+                const dateKey = cursor.toISOString().split('T')[0];
                 slots[dateKey] = ["09:00", "09:30", "10:00", "11:00", "15:00", "16:30"];
             }
             cursor.setDate(cursor.getDate() + 1);

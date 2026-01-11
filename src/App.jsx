@@ -1,32 +1,37 @@
-import React, { useState } from 'react';
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { DashboardPage } from "@/pages/DashboardPage";
-import { PatientsPage } from "@/pages/PatientsPage";
-import { NewAppointmentPage } from "@/pages/NewAppointmentPage";
-import { AgendaPage } from "@/pages/AgendaPage";
-import { AvailabilityPage } from "@/pages/AvailabilityPage";
-import { ThemeController } from "@/components/ThemeController";
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+
+// Páginas
+import { DashboardPage } from '@/pages/DashboardPage';
+import { AgendaPage } from '@/pages/AgendaPage';
+import { PatientsPage } from '@/pages/PatientsPage';
+import { AvailabilityPage } from '@/pages/AvailabilityPage';
+import { NewAppointmentPage } from '@/pages/NewAppointmentPage';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
-
-  const handleNavigate = (page) => setCurrentPage(page);
-
   return (
-    <>
-      <ThemeController />
-      <DashboardLayout currentPage={currentPage} setCurrentPage={setCurrentPage}>
-        {currentPage === 'dashboard' && <DashboardPage onNavigate={handleNavigate} />}
-        {currentPage === 'patients' && <PatientsPage />}
-        {currentPage === 'new-appointment' && <NewAppointmentPage onNavigate={handleNavigate} />}
-        {currentPage === 'agenda' && <AgendaPage onNavigate={handleNavigate} />}
-        {currentPage === 'availability' && <AvailabilityPage />}
+    <Routes>
+      {/* Layout Principal que envuelve todo */}
+      <Route element={<DashboardLayout />}>
 
-        {/* Placeholder for other pages */}
-        {currentPage === 'messages' && <div className="p-8 text-slate-500">Mensajes Component (Coming Soon)</div>}
-        {currentPage === 'settings' && <div className="p-8 text-slate-500">Settings Component (Coming Soon)</div>}
-      </DashboardLayout>
-    </>
+        {/* Redirección: Si entra a raíz, va al dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* Rutas Definidas */}
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/agenda" element={<AgendaPage />} />
+        <Route path="/pacientes" element={<PatientsPage />} />
+        <Route path="/disponibilidad" element={<AvailabilityPage />} />
+
+        {/* Sub-rutas o Modales en página completa si quisieras */}
+        <Route path="/nuevo-turno" element={<NewAppointmentPage />} />
+
+        {/* Placeholder para rutas no creadas aún */}
+        <Route path="*" element={<div className="p-10 text-center text-slate-500">Página en construcción 🚧</div>} />
+
+      </Route>
+    </Routes>
   );
 }
 

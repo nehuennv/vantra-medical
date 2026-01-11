@@ -1,60 +1,48 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search,
-    LayoutList, Kanban, FilterX, Clock, CheckCircle2, XCircle, CalendarX, Plus,
-    MoreHorizontal, User, FileText, Phone, ArrowRight, Activity
+    LayoutList, Kanban, Clock, CheckCircle2, XCircle, CalendarX, Plus,
+    Activity
 } from 'lucide-react';
-import { DndContext, useDraggable, useDroppable, DragOverlay, useSensor, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
+import { useSensor, useSensors, PointerSensor } from '@dnd-kit/core'; // Only sensors needed? No, sensors were for DndContext. AgendaKanbanView needs sensors?
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { calComService } from '@/services/calComService';
+import { useAppointments } from '@/hooks/useAppointments';
 import { AppointmentDetailModal } from '@/components/agenda/AppointmentDetailModal';
+import { AgendaKanbanView } from '@/components/agenda/AgendaKanbanView';
+import { AgendaListView } from '@/components/agenda/AgendaListView';
 
-// --- HELPER UTIL ---
-const isSameDay = (d1, d2) => {
-    return d1.getFullYear() === d2.getFullYear() &&
-        d1.getMonth() === d2.getMonth() &&
-        d1.getDate() === d2.getDate();
-};
+// --- HELPERS ---
+const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
 
-// --- CONFIGURACIÓN DE ESTADOS (Mapeo Cal.com -> Kanban) ---
+// Estilos de estado unificados
 const STATUS_CONFIG = {
-    PENDING: {
-        id: 'PENDING', label: 'Pendiente', icon: Clock,
-        color: 'text-amber-600', bg: 'bg-amber-100', border: 'border-amber-200', bar: 'bg-amber-500' // Darker bg for contrast
-    },
-    ACCEPTED: {
-        id: 'ACCEPTED', label: 'Confirmado', icon: CheckCircle2,
-        color: 'text-indigo-600', bg: 'bg-indigo-100', border: 'border-indigo-200', bar: 'bg-indigo-500' // Darker bg
-    },
-    IN_PROGRESS: {
-        id: 'IN_PROGRESS', label: 'En Consulta', icon: Activity,
-        color: 'text-emerald-600', bg: 'bg-emerald-100', border: 'border-emerald-200', bar: 'bg-emerald-500'
-    },
-    CANCELLED: {
-        id: 'CANCELLED', label: 'Cancelado', icon: XCircle,
-        color: 'text-slate-500', bg: 'bg-slate-100', border: 'border-slate-200', bar: 'bg-slate-400'
-    }
+    PENDING: { id: 'PENDING', label: 'Pendiente', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
+    ACCEPTED: { id: 'ACCEPTED', label: 'Confirmado', icon: CheckCircle2, color: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-500' },
+    IN_PROGRESS: { id: 'IN_PROGRESS', label: 'En Consulta', icon: Activity, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
+    CANCELLED: { id: 'CANCELLED', label: 'Cancelado', icon: XCircle, color: 'text-slate-500', bg: 'bg-slate-50', bar: 'bg-slate-400' }
 };
 
-// --- COMPONENTES UI INTERNOS ---
+// --- ESTILOS REUTILIZABLES (GLASSMORPHISM) ---
+// Clave: border-white/60 para el efecto "borde de luz" y backdrop-blur
+const GLASS_CARD_STYLE = "bg-white/80 hover:bg-white backdrop-blur-md border border-white/60 shadow-sm hover:shadow-md transition-all duration-300";
+const GLASS_CONTAINER_STYLE = "bg-slate-100/50 backdrop-blur-xl border border-white/50 shadow-inner";
 
-// 1. Switch de Vistas (Lista vs Tablero)
+// --- UI COMPONENTS ---
+
 const ViewToggle = ({ current, onChange }) => (
-    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 h-10 w-fit">
-        {[
-            { id: 'list', icon: LayoutList, label: 'Lista' },
-            { id: 'kanban', icon: Kanban, label: 'Tablero' }
-        ].map((view) => (
+    <div className="flex bg-white/50 p-1 rounded-xl border border-white/60 shadow-sm h-10 w-fit shrink-0 backdrop-blur-sm">
+        {[{ id: 'list', icon: LayoutList, label: 'Lista' }, { id: 'kanban', icon: Kanban, label: 'Tablero' }].map((view) => (
             <button
                 key={view.id}
                 onClick={() => onChange(view.id)}
                 className={cn(
-                    "flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
+                    "flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
                     current === view.id
                         ? "bg-white text-slate-900 shadow-sm ring-1 ring-black/5"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-white/30"
                 )}
             >
                 <view.icon className="h-4 w-4" />
@@ -64,213 +52,99 @@ const ViewToggle = ({ current, onChange }) => (
     </div>
 );
 
-// 2. Componente Visual (UI Pura) - Estilo High Contrast & Responsive
-const AppointmentCardVisual = React.forwardRef(({ booking, isOverlay, onClick, style, ...props }, ref) => {
-    const config = STATUS_CONFIG[booking.status] || STATUS_CONFIG.PENDING;
-    const dateObj = new Date(booking.startTime);
-    // Manual strict formatting for stability
-    const hours = dateObj.getHours().toString().padStart(2, '0');
-    const minutes = dateObj.getMinutes().toString().padStart(2, '0');
-    const timeFormatted = `${hours}:${minutes}`;
-    const period = dateObj.getHours() >= 12 ? 'PM' : 'AM';
+// --- SKELETON ALTO CONTRASTE ---
+const AgendaSkeleton = ({ view, isStatic = false }) => {
+    // Si es estático (fondo vacío), se ve sólido. Si carga, pulsa.
+    const animClass = isStatic ? "" : "animate-pulse";
+    const opacityClass = isStatic ? "opacity-30 grayscale" : "opacity-100";
+
+    // Usamos bg-gray-200 para que SE VEA BIEN la forma
+    const blockColor = "bg-gray-200";
 
     return (
-        <div
-            ref={ref}
-            style={style}
-            onClick={onClick}
-            className={cn(
-                "relative p-3.5 rounded-2xl bg-white border border-slate-200 shadow-sm transition-all duration-200 cursor-grab group select-none flex items-center gap-4 hover:shadow-md hover:border-indigo-300",
-                isOverlay
-                    ? "shadow-2xl z-50 cursor-grabbing ring-1 ring-slate-900/10 rotate-1 scale-105"
-                    : ""
-            )}
-            {...props}
-        >
-            {/* Time Box - Widened to prevent collapse */}
-            <div className="flex flex-col items-center justify-center w-16 h-14 bg-slate-100 rounded-xl border border-slate-200 shadow-sm flex-shrink-0">
-                <span className="text-sm font-black text-slate-800 leading-none mb-0.5 tracking-tight">{timeFormatted}</span>
-                <span className="text-[10px] font-bold text-slate-500 leading-none">{period}</span>
-            </div>
-
-            {/* Info Content */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-bold text-slate-900 text-sm truncate leading-tight pr-2">
-                        {booking.attendees?.[0]?.name || "Paciente"}
-                    </h4>
-                    {/* Status Dot */}
-                    <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", config.bar)} title={config.label} />
+        <div className={cn("h-full w-full pointer-events-none select-none p-1 transition-opacity duration-500", opacityClass)}>
+            {view === 'kanban' ? (
+                <div className="flex gap-6 h-full min-w-[1200px]">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="flex-1 min-w-[300px] h-full flex flex-col gap-4 rounded-2xl p-4 border-2 border-dashed border-slate-300/50 bg-slate-50/50">
+                            {/* Header Column Fake */}
+                            <div className={cn("flex justify-between items-center mb-2", animClass)}>
+                                <div className={`h-6 w-32 ${blockColor} rounded-md`} />
+                                <div className={`h-6 w-8 ${blockColor} rounded-md`} />
+                            </div>
+                            {/* Cards Fake */}
+                            <div className={cn("space-y-4", animClass)}>
+                                {[1, 2, 3].map(j => (
+                                    <div key={j} className="h-32 bg-white rounded-2xl border border-white shadow-sm" />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </div>
-
-                <p className="text-xs text-slate-500 font-medium truncate mb-2">
-                    {booking.title}
-                </p>
-
-                {/* Footer Badges */}
-                <div className="flex items-center gap-2">
-                    <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider", config.bg, config.color, config.border)}>
-                        {config.label}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                        PARTICULAR
-                    </span>
-                </div>
-            </div>
-        </div>
-    );
-});
-
-// 2.1 Wrapper Funcional (Lógica D&D)
-const AppointmentCard = ({ booking, onViewDetails }) => {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-        id: booking.id,
-        data: booking
-    });
-
-    const style = {
-        opacity: isDragging ? 0.3 : 1, // Ghost styling handled by overlay usually
-        cursor: isDragging ? 'grabbing' : 'grab',
-    };
-
-    return (
-        <AppointmentCardVisual
-            ref={setNodeRef}
-            style={style}
-            booking={booking}
-            onClick={onViewDetails}
-            {...listeners}
-            {...attributes}
-        />
-    );
-};
-
-// 3. Columna Kanban (Responsive & Contrast)
-const KanbanColumn = ({ id, title, count, children, loading }) => {
-    const { setNodeRef, isOver } = useDroppable({ id });
-    const config = STATUS_CONFIG[id] || STATUS_CONFIG.PENDING;
-
-    return (
-        <div
-            ref={setNodeRef}
-            className={cn(
-                "flex flex-col h-full rounded-2xl bg-slate-50/80 border border-slate-200/60 p-1 transition-colors min-h-[400px]",
-                isOver ? "bg-indigo-50/50 border-indigo-200 ring-2 ring-indigo-500/10" : ""
-            )}
-        >
-            {/* Header Columna */}
-            <div className="p-3 mb-2 flex justify-between items-center bg-white/50 rounded-xl border border-slate-100/50 backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                    <div className={cn("p-2 rounded-lg border shadow-sm bg-white", config.border)}>
-                        <config.icon className={cn("h-4 w-4", config.color)} />
+            ) : (
+                <div className="h-full w-full bg-white/60 rounded-3xl border border-white shadow-sm overflow-hidden flex flex-col">
+                    <div className="h-12 border-b border-slate-100 bg-white/40 w-full" />
+                    <div className={cn("p-4 space-y-3", animClass)}>
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className={`h-16 w-full ${blockColor} rounded-xl opacity-50`} />
+                        ))}
                     </div>
-                    <span className="font-bold text-slate-900 text-sm">{title}</span>
                 </div>
-                <span className="bg-white text-slate-700 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
-                    {count}
-                </span>
-            </div>
-
-            {/* Droppable Area */}
-            <div className="flex-1 p-2 space-y-3 overflow-y-auto custom-scrollbar">
-                {children}
-                {!loading && React.Children.count(children) === 0 && (
-                    <div className="h-40 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 gap-2 m-1">
-                        <span className="text-xs font-semibold opacity-60">Sin turnos</span>
-                    </div>
-                )}
-            </div>
+            )}
         </div>
     );
 };
 
-// --- PÁGINA PRINCIPAL ---
+// --- EMPTY STATE CARD (Glass Premium) ---
+const EmptyStateCard = ({ date, onCreate }) => (
+    <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="absolute inset-0 z-10 flex items-center justify-center p-4"
+    >
+        <div className="bg-white/80 backdrop-blur-xl border border-white/80 shadow-2xl rounded-[2.5rem] p-10 max-w-sm w-full text-center relative overflow-hidden ring-1 ring-white">
+            <div className="mx-auto h-20 w-20 bg-indigo-50/80 rounded-full flex items-center justify-center mb-6 text-indigo-500 shadow-inner ring-1 ring-indigo-100">
+                <CalendarX className="h-9 w-9" />
+            </div>
+
+            <h3 className="text-2xl font-black text-slate-800 mb-3 tracking-tight">Agenda Libre</h3>
+            <p className="text-slate-500 font-medium text-sm leading-relaxed mb-8">
+                No hay pacientes para el <br />
+                <span className="text-indigo-600 font-bold text-base">{date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric' })}</span>.
+            </p>
+
+            <Button onClick={onCreate} className="w-full bg-indigo-600 text-white hover:bg-indigo-700 h-12 rounded-xl font-bold shadow-xl shadow-indigo-200/50 transition-transform hover:scale-[1.02]">
+                <Plus className="h-5 w-5 mr-2" />
+                Agendar Turno
+            </Button>
+        </div>
+    </motion.div>
+);
+
+// --- MAIN PAGE ---
 
 export function AgendaPage() {
+    const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [view, setView] = useState('kanban'); // 'list' | 'kanban'
-    const [bookings, setBookings] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [view, setView] = useState('kanban');
     const [searchTerm, setSearchTerm] = useState('');
     const [activeDragId, setActiveDragId] = useState(null);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
-    const [selectedBookingForModal, setSelectedBookingForModal] = useState(null);
+    const [selectedBooking, setSelectedBooking] = useState(null);
 
-    // Sensores
-    const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-    );
+    const { bookings, loading, updateStatus } = useAppointments(currentDate);
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
-    // Cargar Turnos
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true);
-            setBookings([]);
+    const filteredBookings = useMemo(() => bookings.filter(b =>
+        b.attendees?.[0]?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        b.title?.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [bookings, searchTerm]);
 
-            const start = new Date(currentDate);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(currentDate);
-            end.setHours(23, 59, 59, 999);
-
-            try {
-                const rawData = await calComService.getBookings(start, end);
-                const sanitizedData = rawData.reduce((acc, booking) => {
-                    if (!booking || !booking.startTime) return acc;
-
-                    let status = 'PENDING';
-                    const apiStatus = booking.status?.toUpperCase();
-                    if (apiStatus === 'ACCEPTED') status = 'ACCEPTED';
-                    else if (apiStatus === 'PENDING') status = 'PENDING';
-                    else if (apiStatus === 'IN_PROGRESS') status = 'IN_PROGRESS';
-                    else if (['CANCELLED', 'REJECTED'].includes(apiStatus)) status = 'CANCELLED';
-
-                    acc.push({
-                        ...booking,
-                        status,
-                        attendees: booking.attendees?.length > 0 ? booking.attendees : [{ name: 'Paciente Desconocido' }],
-                        startTime: new Date(booking.startTime).toISOString(),
-                        title: booking.title || 'Consulta',
-                    });
-                    return acc;
-                }, []);
-                setBookings(sanitizedData);
-            } catch (e) {
-                console.error(e);
-                setBookings([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        load();
-    }, [currentDate]);
-
-    // Filtrado
-    const filteredBookings = useMemo(() => {
-        return bookings.filter(b =>
-            b.attendees?.[0]?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            b.title?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [bookings, searchTerm]);
-
-    // D&D Handlers
-    const handleDragEnd = (event) => {
-        const { active, over } = event;
+    const handleDragEnd = ({ active, over }) => {
         setActiveDragId(null);
         if (!over) return;
-        const bookingId = active.id;
-        const newStatus = over.id;
-        const currentBooking = bookings.find(b => b.id === bookingId);
-        if (currentBooking && currentBooking.status !== newStatus) {
-            setBookings(prev => prev.map(b =>
-                b.id === bookingId ? { ...b, status: newStatus } : b
-            ));
-            calComService.updateBookingStatus?.(bookingId, newStatus);
-        }
-    };
-
-    const handleOpenDetail = (booking) => {
-        setSelectedBookingForModal(booking);
-        setDetailModalOpen(true);
+        const current = bookings.find(b => b.id === active.id);
+        if (current && current.status !== over.id) updateStatus(active.id, over.id);
     };
 
     const navigateDate = (days) => {
@@ -279,204 +153,86 @@ export function AgendaPage() {
         setCurrentDate(date);
     };
 
-
-
-
     return (
-        <div className="h-full p-4 lg:p-8 max-w-[1920px] mx-auto flex flex-col gap-6">
-            {/* HEADER RESPONSIVE */}
-            <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center bg-white border border-slate-200 shadow-sm rounded-3xl p-4 lg:p-5 flex-shrink-0">
-                {/* 1. Date Nav */}
-                <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto no-scrollbar">
-                    <Button variant="outline" size="icon" onClick={() => navigateDate(-1)} className="rounded-full flex-shrink-0 h-10 w-10 border-slate-200">
-                        <ChevronLeft className="h-5 w-5 text-slate-600" />
-                    </Button>
+        // FONDO BASE DE LA PÁGINA: Gris muy suave para que el Glass resalte (IMPORTANTE)
+        <div className="h-full w-full flex flex-col gap-6 overflow-hidden bg-slate-50/50">
 
-                    <div className="flex-1 xl:min-w-[200px] text-center px-4 whitespace-nowrap">
-                        <span className="block text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            {currentDate.getFullYear()}
-                        </span>
+            {/* Header Fijo (Glass) */}
+            <div className="w-full flex-shrink-0 flex flex-col xl:flex-row gap-4 justify-between items-center bg-white/80 backdrop-blur-xl border border-white/60 shadow-sm rounded-3xl p-4 z-20">
+                <div className="flex items-center justify-center gap-3 w-full xl:w-auto">
+                    <Button variant="outline" size="icon" onClick={() => navigateDate(-1)} className="rounded-full flex-shrink-0 h-10 w-10 border-slate-200 hover:bg-white"><ChevronLeft className="h-5 w-5 text-slate-600" /></Button>
+                    <div className="w-[280px] text-center flex flex-col items-center justify-center flex-shrink-0">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">{currentDate.getFullYear()}</span>
                         <div className="flex items-center justify-center gap-2">
-                            <CalendarIcon className="h-5 w-5 text-indigo-500 hidden sm:block" />
-                            <span className="text-lg font-black text-slate-800 capitalize leading-none">
-                                {currentDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                            </span>
+                            <CalendarIcon className="h-4 w-4 text-indigo-600 hidden sm:block" />
+                            <span className="text-lg font-black text-slate-800 capitalize leading-none whitespace-nowrap">{currentDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
                         </div>
                     </div>
-
-                    <Button variant="outline" size="icon" onClick={() => navigateDate(1)} className="rounded-full flex-shrink-0 h-10 w-10 border-slate-200">
-                        <ChevronRight className="h-5 w-5 text-slate-600" />
-                    </Button>
-
-                    {!isSameDay(currentDate, new Date()) && (
-                        <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())} className="ml-2 rounded-full text-indigo-600 bg-indigo-50 font-bold whitespace-nowrap">
-                            Hoy
-                        </Button>
-                    )}
+                    <Button variant="outline" size="icon" onClick={() => navigateDate(1)} className="rounded-full flex-shrink-0 h-10 w-10 border-slate-200 hover:bg-white"><ChevronRight className="h-5 w-5 text-slate-600" /></Button>
+                    {!isSameDay(currentDate, new Date()) && <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())} className="ml-2 rounded-full text-indigo-600 bg-indigo-50 font-bold h-9 hover:bg-indigo-100">Hoy</Button>}
                 </div>
-
-                {/* 2. Tools */}
-                <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-                    <div className="relative flex-1 sm:w-72">
+                <div className="flex items-center gap-3 w-full xl:w-auto justify-end">
+                    <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar paciente..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all outline-none"
-                        />
+                        <input type="text" placeholder="Buscar paciente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full h-10 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none" />
                     </div>
                     <ViewToggle current={view} onChange={setView} />
                 </div>
             </div>
 
-            {/* CONTENT AREA */}
-            <div className="flex-1 min-h-0 relative">
-                {!loading && bookings.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center p-8 animate-in fade-in zoom-in-95 duration-500">
-                        <div className="h-40 w-40 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-slate-100">
-                            <CalendarX className="h-16 w-16 text-slate-300" />
-                        </div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-2">Día Libre</h3>
-                        <p className="text-slate-500 max-w-md text-center mb-8">
-                            No hay turnos programados para el <span className="font-bold text-slate-700">{currentDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric' })}</span>.
-                        </p>
-                        <Button className="bg-indigo-600 text-white font-bold shadow-xl shadow-indigo-200 hover:scale-105 transition-all">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Nuevo Turno
-                        </Button>
-                    </div>
-                ) : view === 'kanban' ? (
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCorners}
-                        onDragStart={(e) => setActiveDragId(e.active.id)}
-                        onDragEnd={handleDragEnd}
-                    >
-                        {/* GRID RESPONSIVE: 1 Col Mobile -> 2 Col Tablet -> 4 Col Desktop */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 h-full overflow-y-auto pb-20 px-1 custom-scrollbar">
-                            {[
-                                { id: 'PENDING', title: 'Por Confirmar' },
-                                { id: 'ACCEPTED', title: 'Confirmados' },
-                                { id: 'IN_PROGRESS', title: 'En Consulta' },
-                                { id: 'CANCELLED', title: 'Finalizados' }
-                            ].map(column => (
-                                <KanbanColumn
-                                    key={column.id}
-                                    id={column.id}
-                                    title={column.title}
-                                    count={loading ? '...' : filteredBookings.filter(b => b.status === column.id).length}
-                                    loading={loading}
-                                >
-                                    {loading ? (
-                                        Array.from({ length: 3 }).map((_, i) => (
-                                            <div key={i} className="h-32 rounded-2xl bg-slate-100 animate-pulse" />
-                                        ))
-                                    ) : (
-                                        filteredBookings
-                                            .filter(b => b.status === column.id)
-                                            .map(b => (
-                                                <AppointmentCard key={b.id} booking={b} onViewDetails={() => handleOpenDetail(b)} />
-                                            ))
-                                    )}
-                                </KanbanColumn>
-                            ))}
-                        </div>
-                        <DragOverlay dropAnimation={null}>
-                            {activeDragId ? (
-                                <AppointmentCardVisual
-                                    booking={bookings.find(b => b.id === activeDragId)}
-                                    isOverlay
-                                />
-                            ) : null}
-                        </DragOverlay>
-                    </DndContext>
-                ) : (
-                    <div className="bg-white border border-slate-200 shadow-sm rounded-3xl overflow-hidden h-full flex flex-col">
-                        {/* List Header */}
-                        <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 bg-slate-50/50 text-[11px] font-bold text-slate-400 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-sm">
-                            <div className="col-span-2 sm:col-span-1">Hora</div>
-                            <div className="col-span-6 sm:col-span-4">Paciente</div>
-                            <div className="hidden md:block md:col-span-3">Motivo de Consulta</div>
-                            <div className="col-span-4 sm:col-span-2">Estado</div>
-                            <div className="hidden sm:block sm:col-span-2 text-right">Acciones</div>
-                        </div>
+            {/* Contenido Dinámico */}
+            <div className="flex-1 min-h-0 w-full relative overflow-hidden">
 
-                        {/* List Rows */}
-                        <div className="overflow-y-auto flex-1 p-2 space-y-1">
-                            {filteredBookings.map((booking) => {
-                                const config = STATUS_CONFIG[booking.status] || STATUS_CONFIG.PENDING;
-                                const dateObj = new Date(booking.startTime);
-                                const timeFormatted = `${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
-
-                                return (
-                                    <motion.div
-                                        key={booking.id}
-                                        onClick={() => handleOpenDetail(booking)}
-                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                        whileHover={{ backgroundColor: 'rgba(248, 250, 252, 0.8)' }}
-                                        className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-slate-50 hover:border-slate-100 transition-all cursor-pointer items-center rounded-xl group"
-                                    >
-                                        {/* Time */}
-                                        <div className="col-span-2 sm:col-span-1">
-                                            <span className="font-black text-slate-700 text-sm">{timeFormatted}</span>
-                                        </div>
-
-                                        {/* Patient */}
-                                        <div className="col-span-6 sm:col-span-4 flex items-center gap-3">
-                                            <div className={cn("h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm flex-shrink-0", config.bar)}>
-                                                {booking.attendees?.[0]?.name?.charAt(0) || "P"}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-slate-900 text-sm truncate">{booking.attendees[0].name}</p>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100/50">PARTICULAR</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Reason (Desktop) */}
-                                        <div className="hidden md:block md:col-span-3 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400">
-                                                    <FileText className="h-3.5 w-3.5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-medium text-slate-700 truncate">{booking.title}</p>
-                                                    <p className="text-[11px] text-slate-400 truncate">{booking.description || "Sin observaciones"}</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Status */}
-                                        <div className="col-span-4 sm:col-span-2">
-                                            <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border max-w-full truncate", config.bg, config.color, config.border)}>
-                                                <div className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", config.bar)} />
-                                                {config.label}
-                                            </span>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="hidden sm:block sm:col-span-2 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button variant="ghost" size="sm" className="hover:bg-indigo-50 hover:text-indigo-600">
-                                                <span className="text-xs font-bold mr-2">Ver Detalles</span>
-                                                <ArrowRight className="h-3.5 w-3.5" />
-                                            </Button>
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
-                        </div>
+                {/* 1. LAYER BASE (Skeleton Estático) - Siempre visible si no hay datos */}
+                {(loading || bookings.length === 0) && (
+                    <div className="absolute inset-0 z-0">
+                        <AgendaSkeleton view={view} isStatic={!loading} />
                     </div>
                 )}
+
+                {/* 2. OVERLAY (Empty State Card) */}
+                <AnimatePresence>
+                    {!loading && bookings.length === 0 && (
+                        <EmptyStateCard date={currentDate} onCreate={() => navigate('/nuevo-turno', { state: { preSelectedDate: currentDate.toISOString() } })} />
+                    )}
+                </AnimatePresence>
+
+                {/* 3. CONTENIDO REAL */}
+                <AnimatePresence mode="wait">
+                    {!loading && bookings.length > 0 && (
+                        <motion.div
+                            key="content"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="h-full w-full relative z-10"
+                        >
+                            {view === 'kanban' ? (
+                                <AgendaKanbanView
+                                    bookings={filteredBookings}
+                                    statusConfig={STATUS_CONFIG}
+                                    glassStyle={GLASS_CARD_STYLE}
+                                    sensors={sensors}
+                                    activeDragId={activeDragId}
+                                    setActiveDragId={setActiveDragId}
+                                    handleDragEnd={handleDragEnd}
+                                    onViewDetails={(b) => { setSelectedBooking(b); setDetailModalOpen(true); }}
+                                />
+                            ) : (
+                                <AgendaListView
+                                    bookings={filteredBookings}
+                                    statusConfig={STATUS_CONFIG}
+                                    glassContainerStyle={GLASS_CONTAINER_STYLE}
+                                    glassCardStyle={GLASS_CARD_STYLE}
+                                    onViewDetails={(b) => { setSelectedBooking(b); setDetailModalOpen(true); }}
+                                />
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-            <AppointmentDetailModal
-                isOpen={detailModalOpen}
-                booking={selectedBookingForModal}
-                onClose={() => setDetailModalOpen(false)}
-            />
+            <AppointmentDetailModal isOpen={detailModalOpen} booking={selectedBooking} onClose={() => setDetailModalOpen(false)} />
         </div>
     );
 }

@@ -1,28 +1,14 @@
 // src/data/unifiedMockDB.js
+import { mockPatients } from './mockPatients';
 
 // 1. BASE DE DATOS DE PACIENTES (Simulada)
-// En el futuro, esto viene de tu DB real.
-const PATIENTS_DB = {
-    'paciente_1': {
-        id: 'paciente_1',
-        name: 'Lionel Messi',
-        email: 'lio@messi.com',
-        age: 36,
-        bloodType: 'O+',
-        history: ['evt_001', 'evt_002'] // Referencias a consultas pasadas
-    },
-    'paciente_2': {
-        id: 'paciente_2',
-        name: 'Elon Musk',
-        email: 'elon@x.com',
-        age: 52,
-        bloodType: 'A-',
-        history: []
-    }
-};
+// Inicializamos con los datos de mockPatients para tener una base rica
+const PATIENTS_DB = mockPatients.reduce((acc, patient) => {
+    acc[patient.id] = patient;
+    return acc;
+}, {});
 
 // 2. BASE DE DATOS DE CONSULTAS (Evoluciones)
-// Aquí se guarda lo que escribe el médico.
 // Clave: ID del Booking de Cal.com (o un ID generado si no existe)
 const CONSULTATIONS_DB = {
     // Ejemplo de una consulta pasada
@@ -43,33 +29,91 @@ const CONSULTATIONS_DB = {
     }
 };
 
-// --- SIMULACIÓN DE API (Endpoints) ---
+// 3. ESTADO LOCAL DE TURNOS
+// Para guardar estados como "En Sala de Espera" que no están en Cal.com nativamente salvo que usemos metadata
+export const BOOKING_LOCAL_STATE = {};
 
-// Obtener datos completos del paciente + historial para el Modal
+// --- FUNCIONES INTERNAS ---
+
+/**
+ * Busca o crea un paciente basado en la información del booking.
+ * Estrategia: ID (metadata) -> Email -> Nuevo Temporal
+ */
+const getOrCreatePatient = (booking) => {
+    const attendees = booking.attendees || [];
+    const mainAttendee = attendees[0] || {};
+
+    // 1. Intentar buscar por ID si viene en la metadata del booking (Simulado)
+    const metadataPatientId = booking.metadata?.patientId;
+    if (metadataPatientId && PATIENTS_DB[metadataPatientId]) {
+        return PATIENTS_DB[metadataPatientId];
+    }
+
+    // 2. Buscar por Email
+    // Normalizamos emails para evitar duplicados por mayúsculas/minúsculas
+    const emailToFind = mainAttendee.email?.toLowerCase();
+    if (emailToFind) {
+        const foundPatient = Object.values(PATIENTS_DB).find(p =>
+            p.contact?.email?.toLowerCase() === emailToFind ||
+            p.email?.toLowerCase() === emailToFind // Soporte para estructura vieja y nueva
+        );
+        if (foundPatient) return foundPatient;
+    }
+
+    // 3. Crear registro temporal (Paciente Nuevo)
+    // Este paciente no se guarda persistente hasta que el médico lo "Confirme" o edite, 
+    // pero para la vista sirve.
+    const newTempId = `temp_${Date.now()}`;
+    const newPatient = {
+        id: newTempId,
+        name: mainAttendee.name || 'Paciente Nuevo',
+        email: mainAttendee.email || '',
+        contact: { email: mainAttendee.email || '' },
+        isNew: true, // Flag importante para la UI
+        tags: ['Nuevo'],
+        history: []
+    };
+
+    // Opcional: Guardarlo en memoria para esta sesión
+    PATIENTS_DB[newTempId] = newPatient;
+
+    return newPatient;
+};
+
+// --- API SIMULADA (Endpoints) ---
+
+// Obtener datos enriquecidos para un turno específico
+export const fetchEnrichedBooking = async (booking) => {
+    // Simulamos latencia mínima
+    // await new Promise(r => setTimeout(r, 200));
+
+    const patient = getOrCreatePatient(booking);
+
+    // Buscar estado local del turno (ej: si el médico lo movió a "En Sala de Espera")
+    const localState = BOOKING_LOCAL_STATE[booking.id] || {};
+
+    return {
+        ...booking,
+        patient, // Datos completos del paciente asociado
+        localStatus: localState.status || booking.status, // Prioridad al estado local
+        consultationExists: !!CONSULTATIONS_DB[booking.id]
+    };
+};
+
+// Obtener datos completos para el Modal de Atención (Historia Clínica + Consulta Actual)
 export const fetchPatientFullData = async (bookingData) => {
     // Simulamos delay de red
     await new Promise(r => setTimeout(r, 600));
 
-    // Intentamos matchear por email (lo más común entre Cal.com y tu DB)
-    // En la vida real, Cal.com te manda el email del attendee
-    const attendeeEmail = bookingData.attendees?.[0]?.email;
-
-    // Buscamos el paciente en nuestra "DB"
-    let patient = Object.values(PATIENTS_DB).find(p => p.email === attendeeEmail);
-
-    // Si no existe (es paciente nuevo que vino por Cal.com), devolvemos una estructura vacía pero lista
-    if (!patient) {
-        patient = {
-            id: 'new_patient',
-            name: bookingData.attendees?.[0]?.name || 'Paciente Nuevo',
-            email: attendeeEmail,
-            isNew: true, // Flag para saber que es la primera vez
-            history: []
-        };
-    }
+    const patient = getOrCreatePatient(bookingData);
 
     // Enriquecemos el historial con los datos reales de las consultas
-    const fullHistory = patient.history.map(evtId => CONSULTATIONS_DB[evtId]).filter(Boolean);
+    // Asumimos que patient.history tiene refs o son objetos parciales.
+    // Si son referencias, las buscamos. Si ya son objetos, los usamos.
+    const fullHistory = (patient.history || []).map(evt => {
+        if (typeof evt === 'string') return CONSULTATIONS_DB[evt];
+        return evt; // Ya es objeto
+    }).filter(Boolean);
 
     // Verificamos si YA guardamos datos para ESTE turno específico (booking.id)
     const currentConsultation = CONSULTATIONS_DB[bookingData.id] || {
@@ -99,6 +143,19 @@ export const saveConsultation = async (bookingId, data) => {
         lastUpdate: new Date().toISOString()
     };
 
+    // Si guardamos consulta, asumimos que el turno se completó o está en progreso
+    updateBookingLocalStatus(bookingId, 'IN_PROGRESS');
+
     console.log("✅ [BACKEND MOCK] Datos guardados para turno:", bookingId, data);
+    return true;
+};
+
+// Actualizar estado del turno (Drag & Drop o acciones rápidas)
+export const updateBookingLocalStatus = (bookingId, newStatus) => {
+    BOOKING_LOCAL_STATE[bookingId] = {
+        ...BOOKING_LOCAL_STATE[bookingId],
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+    };
     return true;
 };
