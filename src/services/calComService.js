@@ -1,30 +1,90 @@
 import { calComConfig } from '@/config/calcom';
+import { mockPatients } from '@/data/mockPatients';
 
 /**
  * Service to interact with Cal.com API.
  * Includes fallback to mock data if API fails (e.g. invalid key).
  */
+
+// --- GENERADOR DE DATOS RICOS DE AGENDA ---
+const generateRichMockData = () => {
+    const bookings = [];
+    const today = new Date();
+
+    // Helper para crear fecha
+    const createDate = (daysOffset, hour, minute) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() + daysOffset);
+        d.setHours(hour, minute, 0, 0);
+        return d;
+    };
+
+    // Tipos de cunsulta
+    const types = ['Primera Consulta', 'Control Rutina', 'Urgencia', 'Post-operatorio', 'Consulta Estética', 'Revisión Estudios'];
+
+    // Estados posibles (ponderados)
+    const statuses = ['ACCEPTED', 'ACCEPTED', 'ACCEPTED', 'PENDING', 'PENDING', 'IN_PROGRESS', 'CANCELLED'];
+
+    // 1. GENERAR TURNOS PARA HOY (Bien completito)
+    const todaySlots = [
+        { h: 8, m: 30 }, { h: 9, m: 0 }, { h: 9, m: 30 }, { h: 10, m: 0 },
+        { h: 10, m: 30 }, { h: 11, m: 15 }, { h: 12, m: 0 }, { h: 13, m: 30 },
+        { h: 14, m: 0 }, { h: 15, m: 45 }, { h: 16, m: 15 }, { h: 17, m: 0 },
+        { h: 17, m: 30 }, { h: 18, m: 15 }
+    ];
+
+    todaySlots.forEach((slot, i) => {
+        const patient = mockPatients[i % mockPatients.length];
+        const type = types[Math.floor(Math.random() * types.length)];
+        const status = statuses[Math.floor(Math.random() * statuses.length)];
+
+        // Duration random 30-60 mins
+        const duration = Math.random() > 0.7 ? 60 : 30;
+        const start = createDate(0, slot.h, slot.m);
+        const end = new Date(start.getTime() + duration * 60000);
+
+        bookings.push({
+            id: `mock-today-${i}`,
+            title: type,
+            description: `${type} - ${patient.medicalHistory?.currentIllness || 'Sin observaciones'}`,
+            startTime: start.toISOString(),
+            endTime: end.toISOString(),
+            status: status,
+            attendees: [{
+                name: patient.name,
+                email: patient.contact.email,
+                timeZone: "America/Argentina/Buenos_Aires"
+            }],
+            metadata: { patientId: patient.id }
+        });
+    });
+
+    // 2. GENERAR TURNOS PARA MAÑANA Y AYER (Para navegación)
+    [-1, 1, 2].forEach(offset => {
+        const slots = [9, 10, 11, 14, 15, 16]; // Menos turnos
+        slots.forEach((h, i) => {
+            const patient = mockPatients[(i + 10) % mockPatients.length]; // Offset index to vary patients
+            const start = createDate(offset, h, 0);
+            const end = new Date(start.getTime() + 30 * 60000);
+
+            bookings.push({
+                id: `mock-other-${offset}-${h}`,
+                title: 'Control',
+                description: 'Seguimiento',
+                startTime: start.toISOString(),
+                endTime: end.toISOString(),
+                status: 'ACCEPTED',
+                attendees: [{ name: patient.name, email: patient.contact.email }],
+                metadata: { patientId: patient.id }
+            });
+        });
+    });
+
+    return bookings;
+};
+
 // --- IN-MEMORY MOCK STORAGE (Simulates Backend/Database) ---
-let mockStorage = [
-    {
-        id: 'mock-init-1',
-        title: "Consulta - Juan Pérez",
-        description: "Dolor de garganta y fiebre.",
-        startTime: new Date(new Date().setHours(9, 30, 0, 0)).toISOString(),
-        endTime: new Date(new Date().setHours(10, 0, 0, 0)).toISOString(),
-        status: 'ACCEPTED',
-        attendees: [{ name: "Juan Pérez", email: "juan@gmail.com" }]
-    },
-    {
-        id: 'mock-init-2',
-        title: "Control - Maria Garcia",
-        description: "Revisión mensual de tratamiento.",
-        startTime: new Date(new Date().setHours(11, 0, 0, 0)).toISOString(),
-        endTime: new Date(new Date().setHours(11, 45, 0, 0)).toISOString(),
-        status: 'PENDING',
-        attendees: [{ name: "Maria Garcia", email: "maria.g@hotmail.com" }]
-    }
-];
+let mockStorage = generateRichMockData();
 
 export const calComService = {
 

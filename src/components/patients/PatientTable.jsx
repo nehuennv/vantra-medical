@@ -27,20 +27,20 @@ const PatientRow = React.memo(({ patient, onClick }) => {
                     onClick(patient);
                 }
             }}
-            // CSS Native Transition for Hover - Zero Lag
-            className="group transition-colors duration-200 cursor-pointer hover:bg-slate-100 border-b border-indigo-100/40 last:border-none focus:outline-none focus:bg-slate-50 focus:ring-2 focus:ring-inset focus:ring-primary/20"
+            // Enhanced Hover Effect: Floating Card Style
+            className="group relative transition-all duration-200 cursor-pointer border-b border-slate-100 last:border-none hover:bg-white hover:shadow-lg hover:shadow-slate-200/50 hover:z-10 hover:border-transparent hover:-translate-y-0.5"
         >
             {/* Paciente */}
             <td className="px-6 py-4 pl-8">
                 <div className="flex items-center gap-4">
                     <div className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-white",
+                        "h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-white transition-transform group-hover:scale-110",
                         getAvatarColor(patient.name)
                     )}>
                         {patient.name.charAt(0)}
                     </div>
                     <div>
-                        <p className="font-bold text-slate-800 text-sm">{patient.name}</p>
+                        <p className="font-bold text-slate-800 text-sm group-hover:text-primary transition-colors">{patient.name}</p>
                         <p className="text-xs text-slate-500">{patient.contact.email}</p>
                     </div>
                 </div>
@@ -65,7 +65,7 @@ const PatientRow = React.memo(({ patient, onClick }) => {
                         Particular
                     </span>
                 ) : (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100/50">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
                         {patient.insurance || 'Sin Cobertura'}
                     </span>
                 )}
@@ -87,8 +87,8 @@ const PatientRow = React.memo(({ patient, onClick }) => {
                 )}
             </td>
 
-            {/* Próximo Turno - Consistent Format */}
-            <td className="px-6 py-4 pr-8 text-right">
+            {/* Próximo Turno */}
+            <td className="px-6 py-4 text-right">
                 <div className="flex flex-col items-end">
                     {patient.next_appointment ? (
                         <>
@@ -107,6 +107,17 @@ const PatientRow = React.memo(({ patient, onClick }) => {
                         </span>
                     )}
                 </div>
+            </td>
+
+            {/* Action Column - "View More" */}
+            <td className="px-6 py-4 pr-8 text-right">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full text-slate-400 hover:text-primary hover:bg-primary/10 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                >
+                    <ChevronRight className="h-5 w-5" />
+                </Button>
             </td>
         </tr>
     );
@@ -133,12 +144,13 @@ export function PatientTable({ patients, onPatientClick, isLoading, pagination }
         <div className="w-full overflow-hidden bg-white/70 backdrop-blur-xl rounded-[2rem] shadow-sm border border-white/60 will-change-transform">
             <table className="w-full text-left border-collapse">
                 <thead>
-                    <tr className="border-b border-indigo-100/50 bg-white/50 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    <tr className="border-b border-slate-200/60 bg-white/50 text-xs font-bold text-slate-400 uppercase tracking-widest">
                         <th className="px-6 py-4 pl-8">Paciente</th>
                         <th className="px-6 py-4">Identificación</th>
                         <th className="px-6 py-4">Cobertura</th>
                         <th className="px-6 py-4">Última Visita</th>
-                        <th className="px-6 py-4 text-right pr-8">Próximo Turno</th>
+                        <th className="px-6 py-4 text-right">Próximo Turno</th>
+                        <th className="px-6 py-4"></th>
                     </tr>
                 </thead>
                 {/* 
@@ -149,7 +161,6 @@ export function PatientTable({ patients, onPatientClick, isLoading, pagination }
                     variants={containerVariants}
                     initial="hidden"
                     animate="show"
-                    className="divide-y divide-slate-100"
                 >
                     {patients.map((patient) => (
                         <PatientRow
@@ -172,7 +183,7 @@ export function PatientTable({ patients, onPatientClick, isLoading, pagination }
                     </p>
                     <Button
                         onClick={() => console.log("Crear paciente desde empty state")}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200"
+                        className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
                     >
                         <Plus className="mr-2 h-4 w-4" />
                         Agregar Primer Paciente

@@ -26,7 +26,7 @@ export function AgendaWidget({ appointments }) {
         >
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center transition-transform duration-300 ease-in-out group-hover:scale-110 group-hover:rotate-[15deg]">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center transition-transform duration-300 ease-in-out group-hover:scale-110 group-hover:rotate-[15deg]">
                         <CalendarDays className="h-5 w-5" />
                     </div>
                     <div>

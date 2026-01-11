@@ -20,7 +20,7 @@ const isSameDay = (d1, d2) => d1.toDateString() === d2.toDateString();
 // Estilos de estado unificados
 const STATUS_CONFIG = {
     PENDING: { id: 'PENDING', label: 'Pendiente', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
-    ACCEPTED: { id: 'ACCEPTED', label: 'Confirmado', icon: CheckCircle2, color: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-500' },
+    ACCEPTED: { id: 'ACCEPTED', label: 'Confirmado', icon: CheckCircle2, color: 'text-primary', bg: 'bg-primary/10', bar: 'bg-primary' },
     IN_PROGRESS: { id: 'IN_PROGRESS', label: 'En Consulta', icon: Activity, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
     CANCELLED: { id: 'CANCELLED', label: 'Cancelado', icon: XCircle, color: 'text-slate-500', bg: 'bg-slate-50', bar: 'bg-slate-400' }
 };
@@ -33,22 +33,30 @@ const GLASS_CONTAINER_STYLE = "bg-slate-100/50 backdrop-blur-xl border border-wh
 // --- UI COMPONENTS ---
 
 const ViewToggle = ({ current, onChange }) => (
-    <div className="flex bg-white/50 p-1 rounded-xl border border-white/60 shadow-sm h-10 w-fit shrink-0 backdrop-blur-sm">
-        {[{ id: 'list', icon: LayoutList, label: 'Lista' }, { id: 'kanban', icon: Kanban, label: 'Tablero' }].map((view) => (
-            <button
-                key={view.id}
-                onClick={() => onChange(view.id)}
-                className={cn(
-                    "flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap",
-                    current === view.id
-                        ? "bg-white text-slate-900 shadow-sm ring-1 ring-black/5"
-                        : "text-slate-500 hover:text-slate-700 hover:bg-white/30"
-                )}
-            >
-                <view.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{view.label}</span>
-            </button>
-        ))}
+    <div className="flex bg-slate-100/50 p-1 rounded-2xl border border-slate-200/60 h-11 w-fit shrink-0 relative">
+        {[{ id: 'list', icon: LayoutList, label: 'Lista' }, { id: 'kanban', icon: Kanban, label: 'Tablero' }].map((view) => {
+            const isActive = current === view.id;
+            return (
+                <button
+                    key={view.id}
+                    onClick={() => onChange(view.id)}
+                    className={cn(
+                        "flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all relative z-10",
+                        isActive ? "text-white" : "text-slate-500 hover:text-slate-700"
+                    )}
+                >
+                    {isActive && (
+                        <motion.div
+                            layoutId="viewToggle"
+                            className="absolute inset-0 bg-primary rounded-xl shadow-md shadow-primary/30 -z-10"
+                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
+                    )}
+                    <view.icon className="h-4 w-4 relative z-20" />
+                    <span className="hidden sm:inline relative z-20">{view.label}</span>
+                </button>
+            );
+        })}
     </div>
 );
 
@@ -103,17 +111,17 @@ const EmptyStateCard = ({ date, onCreate }) => (
         className="absolute inset-0 z-10 flex items-center justify-center p-4"
     >
         <div className="bg-white/80 backdrop-blur-xl border border-white/80 shadow-2xl rounded-[2.5rem] p-10 max-w-sm w-full text-center relative overflow-hidden ring-1 ring-white">
-            <div className="mx-auto h-20 w-20 bg-indigo-50/80 rounded-full flex items-center justify-center mb-6 text-indigo-500 shadow-inner ring-1 ring-indigo-100">
+            <div className="mx-auto h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 text-primary shadow-inner ring-1 ring-primary/20">
                 <CalendarX className="h-9 w-9" />
             </div>
 
             <h3 className="text-2xl font-black text-slate-800 mb-3 tracking-tight">Agenda Libre</h3>
             <p className="text-slate-500 font-medium text-sm leading-relaxed mb-8">
                 No hay pacientes para el <br />
-                <span className="text-indigo-600 font-bold text-base">{date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric' })}</span>.
+                <span className="text-primary font-bold text-base">{date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric' })}</span>.
             </p>
 
-            <Button onClick={onCreate} className="w-full bg-indigo-600 text-white hover:bg-indigo-700 h-12 rounded-xl font-bold shadow-xl shadow-indigo-200/50 transition-transform hover:scale-[1.02]">
+            <Button onClick={onCreate} className="w-full bg-primary text-white hover:bg-primary/90 h-12 rounded-xl font-bold shadow-xl shadow-primary/30 transition-transform hover:scale-[1.02]">
                 <Plus className="h-5 w-5 mr-2" />
                 Agendar Turno
             </Button>
@@ -155,26 +163,28 @@ export function AgendaPage() {
 
     return (
         // FONDO BASE DE LA PÁGINA: Gris muy suave para que el Glass resalte (IMPORTANTE)
-        <div className="h-full w-full flex flex-col gap-6 overflow-hidden bg-slate-50/50">
+        <div className="h-full w-full flex flex-col gap-6 overflow-hidden bg-transparent">
 
             {/* Header Fijo (Glass) */}
             <div className="w-full flex-shrink-0 flex flex-col xl:flex-row gap-4 justify-between items-center bg-white/80 backdrop-blur-xl border border-white/60 shadow-sm rounded-3xl p-4 z-20">
                 <div className="flex items-center justify-center gap-3 w-full xl:w-auto">
                     <Button variant="outline" size="icon" onClick={() => navigateDate(-1)} className="rounded-full flex-shrink-0 h-10 w-10 border-slate-200 hover:bg-white"><ChevronLeft className="h-5 w-5 text-slate-600" /></Button>
-                    <div className="w-[280px] text-center flex flex-col items-center justify-center flex-shrink-0">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">{currentDate.getFullYear()}</span>
-                        <div className="flex items-center justify-center gap-2">
-                            <CalendarIcon className="h-4 w-4 text-indigo-600 hidden sm:block" />
-                            <span className="text-lg font-black text-slate-800 capitalize leading-none whitespace-nowrap">{currentDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                    <div className="w-[320px] text-center flex items-center justify-center flex-shrink-0">
+                        <div className="text-lg font-black text-slate-800 uppercase tracking-wide">
+                            <span className="text-slate-500">{currentDate.toLocaleDateString('es-AR', { weekday: 'short' })}</span>
+                            <span className="mx-2 text-slate-300">|</span>
+                            <span>{currentDate.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }).replace('.', '')}</span>
+                            <span className="mx-2 text-slate-300">|</span>
+                            <span className="text-slate-500">{currentDate.getFullYear()}</span>
                         </div>
                     </div>
                     <Button variant="outline" size="icon" onClick={() => navigateDate(1)} className="rounded-full flex-shrink-0 h-10 w-10 border-slate-200 hover:bg-white"><ChevronRight className="h-5 w-5 text-slate-600" /></Button>
-                    {!isSameDay(currentDate, new Date()) && <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())} className="ml-2 rounded-full text-indigo-600 bg-indigo-50 font-bold h-9 hover:bg-indigo-100">Hoy</Button>}
+                    {!isSameDay(currentDate, new Date()) && <Button variant="ghost" size="sm" onClick={() => setCurrentDate(new Date())} className="ml-2 rounded-full text-primary bg-primary/10 font-bold h-9 hover:bg-primary/20">Hoy</Button>}
                 </div>
                 <div className="flex items-center gap-3 w-full xl:w-auto justify-end">
                     <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input type="text" placeholder="Buscar paciente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full h-10 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none" />
+                        <input type="text" placeholder="Buscar paciente..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full h-10 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all outline-none" />
                     </div>
                     <ViewToggle current={view} onChange={setView} />
                 </div>

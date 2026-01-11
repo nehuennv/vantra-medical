@@ -150,8 +150,10 @@ export function PatientsPage() {
             {/* Header */}
             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-                        <Users className="h-8 w-8 text-primary" />
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-xl shadow-sm border border-primary/20">
+                            <Users className="h-6 w-6 text-primary" />
+                        </div>
                         Pacientes
                     </h1>
                     <p className="text-sm text-slate-500 font-medium mt-1">
@@ -228,16 +230,12 @@ export function PatientsPage() {
             </motion.div>
 
             {/* Drawer */}
-            <AnimatePresence>
-                {isDrawerOpen && (
-                    <PatientDrawer
-                        isOpen={isDrawerOpen}
-                        onClose={handleCloseDrawer}
-                        patient={selectedPatient}
-                        onEdit={handleEditPatient}
-                    />
-                )}
-            </AnimatePresence>
+            <PatientDrawer
+                isOpen={isDrawerOpen}
+                onClose={handleCloseDrawer}
+                patient={selectedPatient}
+                onEdit={handleEditPatient}
+            />
 
             <CreatePatientModal
                 isOpen={isCreateModalOpen}

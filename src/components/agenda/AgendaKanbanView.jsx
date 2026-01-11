@@ -1,13 +1,16 @@
 import React from 'react';
 import { DndContext, useDraggable, useDroppable, DragOverlay, closestCorners } from '@dnd-kit/core';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Phone, ArrowRight } from 'lucide-react';
+import { Clock, CheckCircle2, Activity, XCircle, FileText } from 'lucide-react';
 
-// --- COMPONENTS LOCAL TO KANBAN ---
+// --- SUB-COMPONENTES VISUALES ---
 
-const AppointmentCardVisual = React.forwardRef(({ booking, isOverlay, onClick, style, statusConfig, glassStyle, ...props }, ref) => {
-    const config = statusConfig[booking.status] || statusConfig.PENDING;
+// 1. La Tarjeta Visual (Ahora resalta más sobre el fondo gris de la columna)
+const AppointmentCardVisual = React.forwardRef(({ booking, isOverlay, onClick, style, statusConfig, ...props }, ref) => {
+    const config = statusConfig?.[booking.status] || {
+        color: 'text-slate-600', bg: 'bg-slate-100', bar: 'bg-slate-400', border: 'border-slate-200'
+    };
+
     const dateObj = new Date(booking.startTime);
     const timeFormatted = dateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
     const period = dateObj.getHours() >= 12 ? 'PM' : 'AM';
@@ -18,42 +21,59 @@ const AppointmentCardVisual = React.forwardRef(({ booking, isOverlay, onClick, s
             style={style}
             onClick={onClick}
             className={cn(
-                glassStyle,
-                "relative p-3 rounded-2xl cursor-grab group select-none flex items-center gap-4 w-full",
-                isOverlay && "shadow-2xl z-50 cursor-grabbing ring-2 ring-indigo-500/20 rotate-1 scale-105 bg-white"
+                // BASE: Tarjeta Blanca Sólida sobre fondo gris
+                "relative group w-full p-3.5 rounded-2xl cursor-grab select-none flex items-center gap-4 transition-all duration-200 ease-out",
+                "bg-white shadow-sm hover:shadow-md", // Blanco puro para máximo contraste
+                "border border-slate-200 hover:border-primary/50", // Borde sutil que se pinta al hover
+                "hover:-translate-y-0.5", // Micro-movimiento sutil
+                isOverlay && "shadow-2xl shadow-primary/20 ring-2 ring-primary/20 rotate-2 scale-105 z-50 cursor-grabbing"
             )}
             {...props}
         >
             {/* BOX DE HORA */}
-            <div className="flex flex-col items-center justify-center w-14 h-14 bg-slate-50/80 rounded-xl border border-white/60 shadow-inner flex-shrink-0">
-                <span className="text-sm font-black text-slate-800 leading-none mb-0.5 tracking-tight">{timeFormatted}</span>
-                <span className="text-[9px] font-bold text-slate-400 leading-none">{period}</span>
+            <div className="flex flex-col items-center justify-center w-14 h-14 bg-primary/10 rounded-xl border border-primary/20 text-primary flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                <span className="text-sm font-black leading-none tracking-tight">{timeFormatted}</span>
+                <span className="text-[9px] font-bold text-primary/60 leading-none mt-0.5">{period}</span>
             </div>
 
-            {/* INFO */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-bold text-slate-800 text-sm truncate pr-2 group-hover:text-indigo-700 transition-colors">
+            {/* INFO CONTENT */}
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+                {/* Header: Nombre + Status Dot */}
+                <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-800 text-sm truncate pr-2 group-hover:text-primary transition-colors">
                         {booking.attendees?.[0]?.name || "Paciente"}
                     </h4>
-                    <div className={cn("w-2 h-2 rounded-full flex-shrink-0 shadow-sm", config.bar)} />
+                    {/* Status Dot */}
+                    <div className={cn("w-2.5 h-2.5 rounded-full flex-shrink-0", config.bar)} />
                 </div>
 
-                <p className="text-[11px] text-slate-500 font-medium truncate mb-2">
-                    {booking.title}
-                </p>
+                {/* Motivo de Consulta */}
+                <div className="flex items-center gap-1.5 text-slate-500">
+                    <FileText className="h-3 w-3 opacity-50" />
+                    <p className="text-[11px] font-medium truncate">
+                        {booking.title || "Consulta General"}
+                    </p>
+                </div>
 
-                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider backdrop-blur-sm", config.bg, config.color, "border-white/50 shadow-sm")}>
-                    {config.label}
-                </span>
+                {/* Badges Footer */}
+                <div className="flex items-center gap-2 mt-1">
+                    <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-md border uppercase tracking-wider", config.bg, config.color, config.border)}>
+                        {config.label}
+                    </span>
+                </div>
             </div>
         </div>
     );
 });
 
-const AppointmentCard = ({ booking, statusConfig, glassStyle, onViewDetails }) => {
+// 2. Wrapper Lógico
+const AppointmentCard = ({ booking, statusConfig, onViewDetails }) => {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: booking.id, data: booking });
-    const style = { opacity: isDragging ? 0.3 : 1, cursor: isDragging ? 'grabbing' : 'grab' };
+
+    const style = {
+        opacity: isDragging ? 0.3 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab'
+    };
 
     return (
         <AppointmentCardVisual
@@ -61,7 +81,6 @@ const AppointmentCard = ({ booking, statusConfig, glassStyle, onViewDetails }) =
             style={style}
             booking={booking}
             statusConfig={statusConfig}
-            glassStyle={glassStyle}
             onClick={onViewDetails}
             {...listeners}
             {...attributes}
@@ -69,47 +88,55 @@ const AppointmentCard = ({ booking, statusConfig, glassStyle, onViewDetails }) =
     );
 };
 
+// 3. Columna del Tablero (AQUÍ ESTÁ EL CAMBIO DE CONTRASTE)
 const KanbanColumn = ({ id, title, count, children, statusConfig }) => {
     const { setNodeRef, isOver } = useDroppable({ id });
-    const config = statusConfig[id] || statusConfig.PENDING;
-    const Icon = config.icon;
+    const config = statusConfig?.[id] || statusConfig?.PENDING;
+    const Icon = config?.icon || Clock;
 
     return (
         <div
             ref={setNodeRef}
             className={cn(
-                "flex flex-col h-full rounded-3xl bg-slate-100/40 border border-white/40 p-2 transition-colors min-h-[400px] w-full min-w-[300px]",
-                isOver && "bg-indigo-50/40 border-indigo-200 ring-2 ring-indigo-500/10"
+                "flex flex-col h-full rounded-3xl p-3 transition-colors duration-300 min-h-[400px] w-full min-w-[320px]",
+                // CAMBIO: Glassmorphism optimizado
+                "bg-white/40 backdrop-blur-xl border border-white/50 shadow-sm shadow-slate-200/20",
+                // Hover drop zone
+                isOver ? "bg-primary/5 border-primary/20 ring-2 ring-primary/10" : ""
             )}
         >
-            <div className="p-2 mb-2 flex justify-between items-center sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                    <div className={cn("p-1.5 rounded-lg bg-white shadow-sm border border-white/60")}>
-                        <Icon className={cn("h-3.5 w-3.5", config.color)} />
+            {/* Header de Columna */}
+            <div className="px-2 py-3 mb-2 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    <div className={cn("p-2 rounded-xl shadow-sm bg-white border border-slate-200", config.color)}>
+                        <Icon className="h-4 w-4" />
                     </div>
-                    <span className="font-bold text-slate-800 text-sm">{title}</span>
+                    <span className="font-bold text-slate-700 text-sm tracking-tight uppercase">{title}</span>
                 </div>
-                <span className="bg-white/80 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-md border border-white/50 shadow-sm">{count}</span>
+                <span className="bg-white text-slate-600 text-xs font-bold px-2.5 py-1 rounded-lg border border-slate-200 shadow-sm">
+                    {count}
+                </span>
             </div>
-            <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar px-1 pb-2">
+
+            {/* Area de Drop */}
+            <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar px-1 pt-2 pb-4">
                 {children}
             </div>
         </div>
     );
 };
 
+// --- COMPONENTE PRINCIPAL ---
+
 export function AgendaKanbanView({
     bookings,
     statusConfig,
-    glassStyle,
     sensors,
     activeDragId,
     setActiveDragId,
     handleDragEnd,
     onViewDetails
 }) {
-    // Columns definition derived from status config or static list?
-    // Using the static list from original file to maintain order
     const COLUMNS = [
         { id: 'PENDING', title: 'Por Confirmar' },
         { id: 'ACCEPTED', title: 'Confirmados' },
@@ -118,9 +145,14 @@ export function AgendaKanbanView({
     ];
 
     return (
-        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={(e) => setActiveDragId(e.active.id)} onDragEnd={handleDragEnd}>
-            <div className="h-full w-full overflow-x-auto overflow-y-hidden custom-scrollbar pb-2">
-                <div className="flex gap-6 h-full min-w-[1200px] px-1">
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={(e) => setActiveDragId(e.active.id)}
+            onDragEnd={handleDragEnd}
+        >
+            <div className="h-full w-full overflow-x-auto overflow-y-hidden custom-scrollbar pb-4 pl-1">
+                <div className="flex gap-6 h-full min-w-[1200px] pr-4">
                     {COLUMNS.map(col => (
                         <div key={col.id} className="flex-1 min-w-[300px] h-full">
                             <KanbanColumn
@@ -129,27 +161,31 @@ export function AgendaKanbanView({
                                 count={bookings.filter(b => b.status === col.id).length}
                                 statusConfig={statusConfig}
                             >
-                                {bookings.filter(b => b.status === col.id).map(b => (
-                                    <AppointmentCard
-                                        key={b.id}
-                                        booking={b}
-                                        statusConfig={statusConfig}
-                                        glassStyle={glassStyle}
-                                        onViewDetails={() => onViewDetails(b)}
-                                    />
-                                ))}
+                                {bookings
+                                    .filter(b => b.status === col.id)
+                                    .map(b => (
+                                        <AppointmentCard
+                                            key={b.id}
+                                            booking={b}
+                                            statusConfig={statusConfig}
+                                            onViewDetails={() => onViewDetails(b)}
+                                        />
+                                    ))}
                             </KanbanColumn>
                         </div>
                     ))}
                 </div>
             </div>
-            <DragOverlay dropAnimation={null}>
+
+            <DragOverlay dropAnimation={{
+                duration: 200,
+                easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+            }}>
                 {activeDragId ? (
                     <AppointmentCardVisual
                         booking={bookings.find(b => b.id === activeDragId)}
                         isOverlay
                         statusConfig={statusConfig}
-                        glassStyle={glassStyle}
                     />
                 ) : null}
             </DragOverlay>

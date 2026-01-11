@@ -18,9 +18,9 @@ export function ActivityFeed({ logs }) {
             case 'success':
                 return {
                     label: "AGENDA",
-                    color: "text-blue-600",
-                    bg: "bg-blue-50",
-                    border: "border-blue-100",
+                    color: "text-primary",
+                    bg: "bg-primary/10",
+                    border: "border-primary/20",
                     icon: CalendarCheck
                 };
             case 'system':
@@ -47,8 +47,8 @@ export function ActivityFeed({ logs }) {
 
             {/* Header Redesigned */}
             <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-xl bg-violet-100 flex items-center justify-center border border-violet-200 transition-transform duration-300 ease-in-out group-hover:scale-110 group-hover:rotate-[15deg]">
-                    <Sparkles className="h-5 w-5 text-violet-600" />
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 transition-transform duration-300 ease-in-out group-hover:scale-110 group-hover:rotate-[15deg]">
+                    <Sparkles className="h-5 w-5 text-primary" />
                 </div>
                 <div>
                     <h3 className="font-bold text-slate-800 text-lg leading-tight">Secretaria IA</h3>
@@ -79,7 +79,7 @@ export function ActivityFeed({ logs }) {
                             {/* Content Structured - Centered */}
                             <div className="flex-1 min-w-0 flex flex-col justify-center">
                                 <p className="text-sm font-semibold text-slate-800 leading-tight group-hover:text-black transition-colors mb-0.5">
-                                    {log.text}
+                                    {log.action}
                                 </p>
                                 <span className="text-[11px] font-medium text-slate-400">
                                     {log.time}

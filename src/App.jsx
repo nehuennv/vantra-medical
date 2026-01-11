@@ -8,6 +8,7 @@ import { AgendaPage } from '@/pages/AgendaPage';
 import { PatientsPage } from '@/pages/PatientsPage';
 import { AvailabilityPage } from '@/pages/AvailabilityPage';
 import { NewAppointmentPage } from '@/pages/NewAppointmentPage';
+import { SettingsPage } from '@/pages/SettingsPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/agenda" element={<AgendaPage />} />
         <Route path="/pacientes" element={<PatientsPage />} />
         <Route path="/disponibilidad" element={<AvailabilityPage />} />
+        <Route path="/configuracion" element={<SettingsPage />} />
 
         {/* Sub-rutas o Modales en página completa si quisieras */}
         <Route path="/nuevo-turno" element={<NewAppointmentPage />} />

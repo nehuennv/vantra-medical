@@ -12,37 +12,12 @@ import { useNavigate } from 'react-router-dom';
 
 export function DashboardPage() {
     const { identity, business, theme, mockData } = clientConfig;
-    const [appointments, setAppointments] = useState([]);
+    // Initialize directly with mock data to ensure it always renders
+    const [appointments, setAppointments] = useState(mockData.appointments || []);
     const navigate = useNavigate();
 
-    // Fetch real appointments for dashboard
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            const now = new Date();
-            const endOfDay = new Date();
-            endOfDay.setHours(23, 59, 59);
+    // Removed async fetch to prevent empty state issues
 
-            try {
-                // Fetch today's real bookings
-                const realBookings = await calComService.getBookings(now, endOfDay);
-
-                // Adapter for AgendaWidget format: { id, time, name, type, status }
-                const formatted = realBookings.map(b => ({
-                    id: b.id,
-                    time: new Date(b.startTime).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }),
-                    name: b.attendees[0]?.name || 'Desconocido',
-                    type: b.title,
-                    status: b.status === 'ACCEPTED' ? 'confirmed' : 'pending'
-                }));
-                setAppointments(formatted);
-            } catch (e) {
-                console.error("Dashboard fetch error", e);
-                // Fallback to mock on error
-                setAppointments(mockData.appointments);
-            }
-        };
-        fetchDashboardData();
-    }, []);
 
     const containerVariants = {
         hidden: { opacity: 0 },

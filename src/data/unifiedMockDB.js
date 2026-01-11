@@ -2,120 +2,148 @@
 import { mockPatients } from './mockPatients';
 
 // 1. BASE DE DATOS DE PACIENTES (Simulada)
-// Inicializamos con los datos de mockPatients para tener una base rica
+// Inicializamos con los datos de mockPatients para tener una base rica, calculando edad y datos faltantes.
 const PATIENTS_DB = mockPatients.reduce((acc, patient) => {
-    acc[patient.id] = patient;
+    // Calcular Edad
+    const age = patient.birthDate
+        ? Math.floor((new Date() - new Date(patient.birthDate)) / 31557600000)
+        : Math.floor(Math.random() * 40) + 20;
+
+    // Asignar Grupo Sanguíneo Random si no existe
+    const bloodTypes = ['A+', 'O+', 'B+', 'AB+', 'A-', 'O-'];
+    const bloodType = patient.bloodType || bloodTypes[Math.floor(Math.random() * bloodTypes.length)];
+
+    acc[patient.id] = {
+        ...patient,
+        history: [], // Inicializamos array de historia
+        age,
+        bloodType
+    };
     return acc;
 }, {});
 
 // 2. BASE DE DATOS DE CONSULTAS (Evoluciones)
-// Clave: ID del Booking de Cal.com (o un ID generado si no existe)
-const CONSULTATIONS_DB = {
-    // Ejemplo de una consulta pasada
-    'evt_001': {
-        id: 'evt_001',
-        date: '2023-12-01T10:00:00',
-        doctor: 'Dr. Vantra',
-        reason: 'Dolor lumbar',
-        vitals: {
-            bloodPressure: '120/80',
-            weight: '75',
-            height: '170',
-            heartRate: '70'
-        },
-        evolution: 'Paciente refiere dolor al agacharse. Se indica reposo y diclofenac.',
-        diagnosis: 'Lumbalgia mecánica',
-        files: []
+const CONSULTATIONS_DB = {};
+
+// --- GENERADOR DE DATOS DE PRUEBA (Rich History) ---
+const DIAGNOSES_POOL = ['Hipertensión Leve', 'Control Rutina', 'Gripe Estacional', 'Alergia Primaveral', 'Dolor Lumbar', 'Migraña Crónica', 'Chequeo General'];
+const EVOLUTIONS_POOL = [
+    'Paciente evoluciona favorablemente. Se mantienen indicaciones.',
+    'Presenta leve mejoría. Se ajusta dosis de medicación.',
+    'Sin cambios significativos. Se solicita interconsulta.',
+    'Excelente estado general. Alta médica en consideración.',
+    'Refiere molestias nocturnas. Se indica reposo relativo.'
+];
+
+// Helper para generar historia mock para un paciente
+export const generateMockHistory = (patientId, count = 3) => {
+    const history = [];
+    for (let i = 0; i < count; i++) {
+        const evtId = `hist_${patientId}_${i}_${Date.now()}`;
+        const date = new Date();
+        date.setMonth(date.getMonth() - (i + 1) * 2);
+
+        const consultation = {
+            id: evtId,
+            date: date.toISOString(),
+            doctor: 'Dr. Vantra',
+            reason: 'Consulta Programada',
+            vitals: {
+                bloodPressure: `${110 + Math.floor(Math.random() * 20)}/${70 + Math.floor(Math.random() * 10)}`,
+                weight: `${65 + Math.floor(Math.random() * 20)}`,
+                height: '170',
+                heartRate: `${60 + Math.floor(Math.random() * 20)}`
+            },
+            evolution: EVOLUTIONS_POOL[Math.floor(Math.random() * EVOLUTIONS_POOL.length)],
+            diagnosis: DIAGNOSES_POOL[Math.floor(Math.random() * DIAGNOSES_POOL.length)],
+            files: i === 0 ? [
+                { name: 'Analisis_Sangre.pdf', date: '12/10/2023', size: '2.4 MB' },
+                { name: 'Radiografia_Torax.jpg', date: '12/10/2023', size: '4.1 MB' }
+            ] : []
+        };
+
+        CONSULTATIONS_DB[evtId] = consultation;
+        history.push(consultation);
     }
+    return history;
 };
 
+// Generar historial para cada paciente existente al inicio
+Object.values(PATIENTS_DB).forEach(patient => {
+    // Generar entre 1 y 4 consultas pasadas
+    patient.history = generateMockHistory(patient.id, Math.floor(Math.random() * 4) + 1);
+});
+
 // 3. ESTADO LOCAL DE TURNOS
-// Para guardar estados como "En Sala de Espera" que no están en Cal.com nativamente salvo que usemos metadata
 export const BOOKING_LOCAL_STATE = {};
 
 // --- FUNCIONES INTERNAS ---
 
-/**
- * Busca o crea un paciente basado en la información del booking.
- * Estrategia: ID (metadata) -> Email -> Nuevo Temporal
- */
 const getOrCreatePatient = (booking) => {
     const attendees = booking.attendees || [];
     const mainAttendee = attendees[0] || {};
 
-    // 1. Intentar buscar por ID si viene en la metadata del booking (Simulado)
     const metadataPatientId = booking.metadata?.patientId;
     if (metadataPatientId && PATIENTS_DB[metadataPatientId]) {
         return PATIENTS_DB[metadataPatientId];
     }
 
-    // 2. Buscar por Email
-    // Normalizamos emails para evitar duplicados por mayúsculas/minúsculas
     const emailToFind = mainAttendee.email?.toLowerCase();
     if (emailToFind) {
         const foundPatient = Object.values(PATIENTS_DB).find(p =>
             p.contact?.email?.toLowerCase() === emailToFind ||
-            p.email?.toLowerCase() === emailToFind // Soporte para estructura vieja y nueva
+            p.email?.toLowerCase() === emailToFind
         );
         if (foundPatient) return foundPatient;
     }
 
-    // 3. Crear registro temporal (Paciente Nuevo)
-    // Este paciente no se guarda persistente hasta que el médico lo "Confirme" o edite, 
-    // pero para la vista sirve.
+    // Crear registro temporal si no existe
     const newTempId = `temp_${Date.now()}`;
+    const bloodTypes = ['A+', 'O+', 'B+', 'AB+', 'A-', 'O-'];
+
     const newPatient = {
         id: newTempId,
         name: mainAttendee.name || 'Paciente Nuevo',
         email: mainAttendee.email || '',
         contact: { email: mainAttendee.email || '' },
-        isNew: true, // Flag importante para la UI
+        isNew: true,
         tags: ['Nuevo'],
-        history: []
+        age: Math.floor(Math.random() * 40) + 20,
+        bloodType: bloodTypes[Math.floor(Math.random() * bloodTypes.length)],
+        history: generateMockHistory(newTempId, 2) // Generar historial mock para visualizar
     };
 
-    // Opcional: Guardarlo en memoria para esta sesión
     PATIENTS_DB[newTempId] = newPatient;
-
     return newPatient;
 };
 
 // --- API SIMULADA (Endpoints) ---
 
-// Obtener datos enriquecidos para un turno específico
 export const fetchEnrichedBooking = async (booking) => {
-    // Simulamos latencia mínima
-    // await new Promise(r => setTimeout(r, 200));
-
     const patient = getOrCreatePatient(booking);
-
-    // Buscar estado local del turno (ej: si el médico lo movió a "En Sala de Espera")
     const localState = BOOKING_LOCAL_STATE[booking.id] || {};
 
     return {
         ...booking,
-        patient, // Datos completos del paciente asociado
-        localStatus: localState.status || booking.status, // Prioridad al estado local
+        patient,
+        localStatus: localState.status || booking.status,
         consultationExists: !!CONSULTATIONS_DB[booking.id]
     };
 };
 
-// Obtener datos completos para el Modal de Atención (Historia Clínica + Consulta Actual)
 export const fetchPatientFullData = async (bookingData) => {
-    // Simulamos delay de red
     await new Promise(r => setTimeout(r, 600));
 
     const patient = getOrCreatePatient(bookingData);
 
-    // Enriquecemos el historial con los datos reales de las consultas
-    // Asumimos que patient.history tiene refs o son objetos parciales.
-    // Si son referencias, las buscamos. Si ya son objetos, los usamos.
     const fullHistory = (patient.history || []).map(evt => {
         if (typeof evt === 'string') return CONSULTATIONS_DB[evt];
-        return evt; // Ya es objeto
+        return evt;
     }).filter(Boolean);
 
-    // Verificamos si YA guardamos datos para ESTE turno específico (booking.id)
+    fullHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Recuperar consulta actual si existe, o crearla vacia para el form
     const currentConsultation = CONSULTATIONS_DB[bookingData.id] || {
         id: bookingData.id,
         date: new Date().toISOString(),
@@ -128,29 +156,28 @@ export const fetchPatientFullData = async (bookingData) => {
     return {
         patient,
         history: fullHistory,
+        files: fullHistory.flatMap(h => h.files || []),
         currentConsultation
     };
 };
 
-// Guardar la evolución (El "Save" del médico)
 export const saveConsultation = async (bookingId, data) => {
-    await new Promise(r => setTimeout(r, 800)); // Delay para que se sienta real
+    await new Promise(r => setTimeout(r, 800));
 
-    // Guardamos en la "DB" en memoria
-    CONSULTATIONS_DB[bookingId] = {
-        ...CONSULTATIONS_DB[bookingId], // Mantenemos datos viejos si había
-        ...data, // Sobreescribimos con lo nuevo
+    const updatedConsultation = {
+        ...CONSULTATIONS_DB[bookingId],
+        ...data,
+        id: bookingId,
+        date: new Date().toISOString(),
         lastUpdate: new Date().toISOString()
     };
 
-    // Si guardamos consulta, asumimos que el turno se completó o está en progreso
+    CONSULTATIONS_DB[bookingId] = updatedConsultation;
     updateBookingLocalStatus(bookingId, 'IN_PROGRESS');
 
-    console.log("✅ [BACKEND MOCK] Datos guardados para turno:", bookingId, data);
     return true;
 };
 
-// Actualizar estado del turno (Drag & Drop o acciones rápidas)
 export const updateBookingLocalStatus = (bookingId, newStatus) => {
     BOOKING_LOCAL_STATE[bookingId] = {
         ...BOOKING_LOCAL_STATE[bookingId],

@@ -140,7 +140,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
     return createPortal(
         <AnimatePresence mode="wait">
             {isOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
+                <motion.div exit={{ opacity: 0 }} className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
 
                     {/* Backdrop with Blur */}
                     <motion.div
@@ -193,7 +193,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                 <div className="flex items-center gap-4 mb-2">
                                     <div className={cn(
                                         "h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm",
-                                        initialData ? "bg-amber-100 text-amber-600" : "bg-indigo-100 text-indigo-600"
+                                        initialData ? "bg-amber-100 text-amber-600" : "bg-primary/20 text-primary"
                                     )}>
                                         {initialData ? <Pencil className="h-6 w-6" /> : <UserPlus className="h-6 w-6" />}
                                     </div>
@@ -210,14 +210,14 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                     onClick={() => setActiveTab('personal')}
                                     className={cn(
                                         "w-full flex items-center gap-4 p-4 rounded-xl text-sm font-bold transition-all text-left group relative overflow-hidden",
-                                        activeTab === 'personal' ? "bg-white shadow-sm text-indigo-600 ring-1 ring-slate-100" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100/50"
+                                        activeTab === 'personal' ? "bg-white shadow-sm text-primary ring-1 ring-slate-100" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100/50"
                                     )}
                                 >
-                                    <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center transition-colors", activeTab === 'personal' ? "bg-indigo-50" : "bg-transparent group-hover:bg-slate-100")}>
+                                    <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center transition-colors", activeTab === 'personal' ? "bg-primary/10" : "bg-transparent group-hover:bg-slate-100")}>
                                         <User className="h-4 w-4" />
                                     </div>
                                     <span className="relative z-10">Datos Personales</span>
-                                    {activeTab === 'personal' && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-600 rounded-r-full" />}
+                                    {activeTab === 'personal' && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />}
                                 </button>
 
                                 <button
@@ -273,9 +273,9 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                     <div className="space-y-2 md:col-span-2">
                                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Nombre Completo</label>
                                                         <div className="relative group">
-                                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-primary transition-colors" />
                                                             <input required name="name" value={formData.name} onChange={handleInputChange}
-                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
+                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
                                                                 placeholder="Ej: Juan Perez"
                                                             />
                                                         </div>
@@ -284,7 +284,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">DNI / Pasaporte</label>
                                                         <input required name="dni" value={formData.dni} onChange={handleInputChange}
-                                                            className="w-full px-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800"
+                                                            className="w-full px-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium text-slate-800"
                                                             placeholder="Sin puntos"
                                                         />
                                                     </div>
@@ -292,9 +292,9 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Fecha Nacimiento</label>
                                                         <div className="relative group">
-                                                            <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                                            <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-primary transition-colors" />
                                                             <input type="date" name="birthDate" value={formData.birthDate} onChange={handleInputChange}
-                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800"
+                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium text-slate-800"
                                                             />
                                                         </div>
                                                     </div>
@@ -302,9 +302,9 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Email</label>
                                                         <div className="relative group">
-                                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-primary transition-colors" />
                                                             <input type="email" name="email" value={formData.email} onChange={handleInputChange}
-                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
+                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
                                                                 placeholder="cliente@email.com"
                                                             />
                                                         </div>
@@ -313,9 +313,9 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                     <div className="space-y-2">
                                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Teléfono</label>
                                                         <div className="relative group">
-                                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-primary transition-colors" />
                                                             <input name="phone" value={formData.phone} onChange={handleInputChange}
-                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
+                                                                className="w-full pl-12 pr-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-medium text-slate-800 placeholder:text-slate-300"
                                                                 placeholder="011 1234 5678"
                                                             />
                                                         </div>
@@ -324,7 +324,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                     <div className="space-y-2 md:col-span-2">
                                                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Obra Social / Prepaga</label>
                                                         <select name="insurance" value={formData.insurance} onChange={handleInputChange}
-                                                            className="w-full px-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold text-slate-700 appearance-none cursor-pointer"
+                                                            className="w-full px-4 py-4 rounded-xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all font-bold text-slate-700 appearance-none cursor-pointer"
                                                         >
                                                             <option value="" className="text-slate-400">Seleccionar cobertura...</option>
                                                             <option value="Particular">Particular</option>
@@ -373,7 +373,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                             <textarea
                                                                 name="medicalHistory" value={formData.medicalHistory} onChange={handleInputChange}
                                                                 placeholder="Patologías previas..."
-                                                                className="w-full p-4 h-32 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all resize-none font-medium text-slate-700"
+                                                                className="w-full p-4 h-32 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all resize-none font-medium text-slate-700"
                                                             />
                                                         </div>
                                                         <div className="space-y-2">
@@ -381,7 +381,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                             <textarea
                                                                 name="medications" value={formData.medications} onChange={handleInputChange}
                                                                 placeholder="Medicación habitual..."
-                                                                className="w-full p-4 h-32 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all resize-none font-medium text-slate-700"
+                                                                className="w-full p-4 h-32 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all resize-none font-medium text-slate-700"
                                                             />
                                                         </div>
                                                     </div>
@@ -389,7 +389,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                     <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
                                                         <div className="flex items-center justify-between mb-4">
                                                             <h4 className="text-sm font-bold text-slate-700">Archivos Adjuntos</h4>
-                                                            <label className="cursor-pointer bg-white text-indigo-600 px-4 py-2 rounded-lg text-xs font-bold border border-indigo-100 hover:bg-indigo-50 transition-colors flex items-center gap-2 shadow-sm">
+                                                            <label className="cursor-pointer bg-white text-primary px-4 py-2 rounded-lg text-xs font-bold border border-primary/20 hover:bg-primary/10 transition-colors flex items-center gap-2 shadow-sm">
                                                                 <Upload className="h-4 w-4" /> Subir Archivos
                                                                 <input type="file" multiple className="hidden" onChange={handleFileAdd} />
                                                             </label>
@@ -403,7 +403,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                                             <div className="space-y-2">
                                                                 {files.map(file => (
                                                                     <div key={file.id} className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                                                                        <div className="h-10 w-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
+                                                                        <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold text-xs uppercase">
                                                                             {file.name.split('.').pop().substring(0, 3)}
                                                                         </div>
                                                                         <div className="flex-1 min-w-0">
@@ -441,7 +441,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                                     <Button
                                         type={activeTab === 'personal' ? 'button' : 'submit'}
                                         onClick={activeTab === 'personal' ? () => setActiveTab('medical') : undefined}
-                                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-8 h-12 shadow-lg shadow-indigo-600/20 font-bold transition-all active:scale-95"
+                                        className="bg-primary hover:bg-primary/90 text-white rounded-xl px-8 h-12 shadow-lg shadow-primary/20 font-bold transition-all active:scale-95"
                                     >
                                         {activeTab === 'personal' ? 'Siguiente' : (initialData ? 'Guardar Cambios' : 'Crear Paciente')}
                                         {activeTab === 'personal' && <ChevronRight className="h-4 w-4 ml-2" />}
@@ -450,7 +450,7 @@ export function CreatePatientModal({ isOpen, onClose, onSubmit, initialData }) {
                             </form>
                         </div>
                     </motion.div>
-                </div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

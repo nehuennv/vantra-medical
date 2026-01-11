@@ -116,7 +116,13 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
     return createPortal(
         <AnimatePresence mode="wait">
             {isOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+                >
 
                     {/* Backdrop */}
                     <motion.div
@@ -417,8 +423,8 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                                                             className="flex flex-col bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-primary/30 cursor-pointer transition-all duration-300 relative group/card"
                                                         >
                                                             {/* Hover Action Overlay */}
-                                                            <div className="absolute inset-0 bg-white/90 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10 rounded-2xl">
-                                                                <Button size="sm" variant="outline" className="h-8 text-xs">Ver Detalle</Button>
+                                                            <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] opacity-0 group-hover/card:opacity-100 transition-all duration-300 flex items-center justify-center gap-2 z-10 rounded-2xl">
+                                                                <Button size="sm" className="h-9 px-4 bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-lg font-bold text-xs ring-1 ring-black/5">Ver Detalle</Button>
                                                             </div>
 
                                                             {/* Header Line */}
@@ -471,8 +477,8 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                                             className="space-y-8"
                                         >
                                             <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-                                                <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
-                                                    <UploadCloud className="h-4 w-4 text-blue-600" />
+                                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                                    <UploadCloud className="h-4 w-4 text-primary" />
                                                 </div>
                                                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Archivos</h3>
                                             </div>
@@ -483,21 +489,21 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                                                         <div
                                                             key={idx}
                                                             onClick={() => handleFileClick(file)}
-                                                            className="group flex items-start gap-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-lg hover:border-blue-100 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+                                                            className="group flex items-start gap-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-lg hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
                                                         >
-                                                            <div className="h-12 w-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                                            <div className="h-12 w-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
                                                                 <LucideFile className="h-6 w-6" />
                                                             </div>
                                                             <div className="flex-1 min-w-0 py-0.5">
-                                                                <p className="text-sm font-bold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{file.file?.name || file.name || "Documento"}</p>
+                                                                <p className="text-sm font-bold text-slate-800 truncate group-hover:text-primary transition-colors">{file.file?.name || file.name || "Documento"}</p>
                                                                 <p className="text-xs text-slate-400 mt-1 line-clamp-1">{file.note || "Sin notas"}</p>
                                                                 <div className="flex items-center gap-2 mt-2">
-                                                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-blue-50/50 transition-colors">
+                                                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md group-hover:bg-primary/5 transition-colors">
                                                                         {formatDate(file.date || new Date().toISOString())}
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                            <div className="p-2 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100">
+                                                            <div className="p-2 text-slate-300 hover:text-primary hover:bg-primary/10 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100">
                                                                 {isPreviewable(file) ? <Eye className="h-4 w-4" /> : <Download className="h-4 w-4" />}
                                                             </div>
                                                         </div>
@@ -624,7 +630,7 @@ export function PatientDrawer({ isOpen, onClose, patient, onEdit }) {
                         </AnimatePresence>
 
                     </motion.div>
-                </div>
+                </motion.div>
             )}
         </AnimatePresence>,
         document.body

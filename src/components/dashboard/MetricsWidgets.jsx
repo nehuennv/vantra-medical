@@ -86,7 +86,7 @@ export function SourcesWidget({ data }) {
                         >
                             <div className="flex items-center gap-1.5 truncate">
                                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }}></span>
-                                <span className="text-slate-600 truncate">{item.name}</span>
+                                <span className="text-slate-600 truncate">{item.label}</span>
                             </div>
                             <span className="font-bold text-slate-800">{item.value}%</span>
                         </motion.div>

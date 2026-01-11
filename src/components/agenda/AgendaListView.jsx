@@ -32,13 +32,10 @@ export function AgendaListView({
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3, delay: index * 0.05 }}
                                 onClick={() => onViewDetails(booking)}
-                                className={cn(
-                                    "group grid grid-cols-12 gap-4 items-center p-3 rounded-2xl cursor-pointer",
-                                    glassCardStyle
-                                )}
+                                className="group relative grid grid-cols-12 gap-4 items-center p-3 sm:p-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/50 hover:-translate-y-0.5 cursor-pointer hover:border-transparent z-0 hover:z-10"
                             >
                                 <div className="col-span-2 sm:col-span-1 flex justify-center">
-                                    <div className="bg-slate-50 text-slate-800 font-bold text-xs px-2 py-1.5 rounded-lg border border-white/60">
+                                    <div className="text-slate-900 font-black text-sm text-center leading-tight">
                                         {dateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                                     </div>
                                 </div>
@@ -47,7 +44,7 @@ export function AgendaListView({
                                         {booking.attendees?.[0]?.name?.charAt(0) || "P"}
                                     </div>
                                     <div className="flex flex-col min-w-0">
-                                        <span className="font-bold text-slate-800 text-sm truncate group-hover:text-indigo-700">
+                                        <span className="font-bold text-slate-800 text-sm truncate group-hover:text-primary">
                                             {booking.attendees?.[0]?.name || "Paciente"}
                                         </span>
                                         <span className="text-[10px] font-semibold text-slate-400 uppercase">Particular</span>
@@ -65,10 +62,10 @@ export function AgendaListView({
                                     </span>
                                 </div>
                                 <div className="hidden sm:flex sm:col-span-2 justify-end items-center gap-2 opacity-0 translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0">
-                                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:text-indigo-600 hover:bg-white/50">
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full hover:text-primary hover:bg-white/50">
                                         <Phone className="h-3.5 w-3.5" />
                                     </Button>
-                                    <Button size="sm" className="h-8 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 text-xs px-3 shadow-md">
+                                    <Button size="sm" className="h-8 rounded-full bg-primary text-white hover:bg-primary/90 text-xs px-3 shadow-md">
                                         Ver <ArrowRight className="h-3 w-3 ml-1" />
                                     </Button>
                                 </div>
