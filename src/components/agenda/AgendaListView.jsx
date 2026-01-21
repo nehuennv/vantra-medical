@@ -35,7 +35,7 @@ export function AgendaListView({
                                 className="group relative grid grid-cols-12 gap-4 items-center p-3 sm:p-4 rounded-2xl bg-white border border-slate-100 shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/50 hover:-translate-y-0.5 cursor-pointer hover:border-transparent z-0 hover:z-10"
                             >
                                 <div className="col-span-2 sm:col-span-1 flex justify-center">
-                                    <div className="text-slate-900 font-black text-sm text-center leading-tight">
+                                    <div className={cn("font-black text-sm text-center leading-tight", config.color)}>
                                         {dateObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}
                                     </div>
                                 </div>

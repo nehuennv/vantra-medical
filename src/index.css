@@ -100,13 +100,19 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased font-sans overflow-x-hidden;
-    /* EL FONDO AURA DISRUPTIVO */
-    background:
-      radial-gradient(at 0% 0%, hsl(var(--primary) / 0.12) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(262, 83%, 58%, 0.08) 0px, transparent 50%),
+    @apply bg-white text-foreground antialiased font-sans overflow-x-hidden;
+
+    /* SUPREME GRADIENT BACKGROUND (Arc Inspired) */
+    /* Base blanca con acentos sutiles del color primario y secundarios */
+    background-image:
+      radial-gradient(at 0% 0%, hsla(var(--primary) / 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(280, 70%, 75%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(var(--primary) / 0.08) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(220, 70%, 80%, 0.1) 0px, transparent 50%),
       radial-gradient(at 50% 50%, #ffffff 0px, transparent 100%);
     background-attachment: fixed;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
   }
 }
 

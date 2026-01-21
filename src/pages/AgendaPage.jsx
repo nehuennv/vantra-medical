@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar as CalendarIcon, ChevronLeft, ChevronRight, Search,
     LayoutList, Kanban, Clock, CheckCircle2, XCircle, CalendarX, Plus,
-    Activity
+    Activity, Loader2
 } from 'lucide-react';
 import { useSensor, useSensors, PointerSensor } from '@dnd-kit/core'; // Only sensors needed? No, sensors were for DndContext. AgendaKanbanView needs sensors?
 import { cn } from '@/lib/utils';
@@ -194,13 +194,22 @@ export function AgendaPage() {
             <div className="flex-1 min-h-0 w-full relative overflow-hidden">
 
                 {/* 1. LAYER BASE (Skeleton Estático) - Siempre visible si no hay datos */}
-                {(loading || bookings.length === 0) && (
-                    <div className="absolute inset-0 z-0">
-                        <AgendaSkeleton view={view} isStatic={!loading} />
-                    </div>
-                )}
+                {/* 1. LOADING STATE (Spinner Minimalista) */}
+                <AnimatePresence>
+                    {loading && (
+                        <motion.div
+                            key="loader"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 backdrop-blur-sm"
+                        >
+                            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                {/* 2. OVERLAY (Empty State Card) */}
+                {/* 2. OVERLAY (Empty State Card) - Solo si NO carga y NO hay datos */}
                 <AnimatePresence>
                     {!loading && bookings.length === 0 && (
                         <EmptyStateCard date={currentDate} onCreate={() => navigate('/nuevo-turno', { state: { preSelectedDate: currentDate.toISOString() } })} />

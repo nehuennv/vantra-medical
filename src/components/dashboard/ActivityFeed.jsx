@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, CircleDollarSign, CalendarCheck, Settings2, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
 
 export function ActivityFeed({ logs }) {
 
@@ -43,7 +44,7 @@ export function ActivityFeed({ logs }) {
     };
 
     return (
-        <div className="group rounded-[2rem] bg-white/70 backdrop-blur-md border border-white/60 shadow-sm p-6 h-full flex flex-col min-h-[350px] transition-all duration-300 ease-in-out hover:-translate-y-[5px] hover:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.15)]">
+        <SpotlightCard className="p-6 h-full flex flex-col min-h-[350px]">
 
             {/* Header Redesigned */}
             <div className="flex items-center gap-3 mb-6">
@@ -94,6 +95,6 @@ export function ActivityFeed({ logs }) {
                     );
                 })}
             </div>
-        </div>
+        </SpotlightCard>
     );
 }

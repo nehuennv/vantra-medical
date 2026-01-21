@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { cn } from "@/lib/utils";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { motion, useSpring, useTransform } from "framer-motion";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
 
 export function StatCard({ title, value, targetValue, prefix = "", suffix = "", trend, trendValue, icon: Icon, color, inverseTrend }) {
     // Logic: 
@@ -15,14 +16,15 @@ export function StatCard({ title, value, targetValue, prefix = "", suffix = "", 
 
     // Animation Logic
     const springValue = useSpring(0, {
-        stiffness: 45,
-        damping: 20,
-        mass: 1
+        stiffness: 75, // Was 45 - Faster acceleration
+        damping: 15,   // Was 20 - Less drag, quicker settle
+        mass: 0.8      // Was 1 - Lighter, moves faster
     });
     const displayValue = useTransform(springValue, (latest) => {
         // Format logic: if strict integer, no decimals. If float, show 1 decimal.
         if (targetValue % 1 === 0) {
-            return `${prefix}${Math.round(latest)}${suffix}`;
+            // Use Math.floor to avoid jittering at the end
+            return `${prefix}${Math.floor(latest).toLocaleString('es-AR')}${suffix}`;
         }
         return `${prefix}${latest.toFixed(1)}${suffix}`; // Keep 1 decimal for floats like 4.2%
     });
@@ -34,9 +36,7 @@ export function StatCard({ title, value, targetValue, prefix = "", suffix = "", 
     }, [targetValue, springValue]);
 
     return (
-        <div
-            className="group relative overflow-hidden rounded-[2rem] bg-white/70 backdrop-blur-md p-6 border border-white/60 shadow-sm transition-all duration-300 ease-in-out hover:-translate-y-[5px] hover:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.15)]"
-        >
+        <SpotlightCard className="p-6">
             <div className="flex items-start justify-between">
                 <div>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{title}</p>
@@ -52,7 +52,7 @@ export function StatCard({ title, value, targetValue, prefix = "", suffix = "", 
                 </div>
             </div>
 
-            <div className="mt-4 flex items-center gap-2">
+            <div className="relative z-10 mt-4 flex items-center gap-2">
                 <span className={cn(
                     "flex items-center px-2 py-1 rounded-lg text-[10px] font-bold",
                     isGood
@@ -63,6 +63,6 @@ export function StatCard({ title, value, targetValue, prefix = "", suffix = "", 
                     {trendValue}
                 </span>
             </div>
-        </div>
+        </SpotlightCard>
     );
 }

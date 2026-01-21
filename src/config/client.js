@@ -30,8 +30,13 @@ const defaultConfig = {
         appointments: [
             { id: 1, time: '09:00', name: 'Mariana López', type: 'Primera Consulta', status: 'confirmed' },
             { id: 2, time: '10:15', name: 'Carlos Díaz', type: 'Control Post-op', status: 'confirmed' },
-            { id: 3, time: '11:30', name: 'Sofía Martínez', type: 'Consulta Estética', status: 'pending' },
-            { id: 4, time: '14:00', name: 'Jorge Pérez', type: 'Urgencia', status: 'confirmed' }
+            { id: 3, time: '11:00', name: 'Ana Garcia', type: 'Chequeo General', status: 'confirmed' },
+            { id: 4, time: '11:30', name: 'Sofía Martínez', type: 'Consulta Estética', status: 'pending' },
+            { id: 5, time: '14:00', name: 'Jorge Pérez', type: 'Urgencia', status: 'confirmed' },
+            { id: 6, time: '16:00', name: 'Lucas Merlo', type: 'Control Rutina', status: 'confirmed' },
+            { id: 7, time: '19:30', name: 'Valentina Ruiz', type: 'Primera Consulta', status: 'confirmed' },
+            { id: 8, time: '20:15', name: 'Martin Gomez', type: 'Entrega Estudios', status: 'confirmed' },
+            { id: 9, time: '21:00', name: 'Lucia Ferreyra', type: 'Telemedicina', status: 'confirmed' }
         ],
         kpis: [
             { id: 1, title: 'Ingresos Mensuales', value: 4582150, trend: 'up', trendValue: '+12%', isCurrency: true, icon: DollarSign, color: "bg-emerald-100 text-emerald-600" },

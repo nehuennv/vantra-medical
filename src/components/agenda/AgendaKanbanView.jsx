@@ -30,10 +30,15 @@ const AppointmentCardVisual = React.forwardRef(({ booking, isOverlay, onClick, s
             )}
             {...props}
         >
-            {/* BOX DE HORA */}
-            <div className="flex flex-col items-center justify-center w-14 h-14 bg-primary/10 rounded-xl border border-primary/20 text-primary flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+            {/* BOX DE HORA: Color dinámico según estado */}
+            <div className={cn(
+                "flex flex-col items-center justify-center w-14 h-14 rounded-xl border flex-shrink-0 transition-colors",
+                config.bg, // Fondo sutil (ej: bg-amber-50)
+                config.color, // Texto color principal (ej: text-amber-600)
+                "border-current/20" // Borde derivado del color de texto con opacidad
+            )}>
                 <span className="text-sm font-black leading-none tracking-tight">{timeFormatted}</span>
-                <span className="text-[9px] font-bold text-primary/60 leading-none mt-0.5">{period}</span>
+                <span className="text-[9px] font-bold opacity-80 leading-none mt-0.5">{period}</span>
             </div>
 
             {/* INFO CONTENT */}
@@ -98,15 +103,15 @@ const KanbanColumn = ({ id, title, count, children, statusConfig }) => {
         <div
             ref={setNodeRef}
             className={cn(
-                "flex flex-col h-full rounded-3xl p-3 transition-colors duration-300 min-h-[400px] w-full min-w-[320px]",
+                "flex flex-col h-full rounded-3xl p-3 transition-colors duration-300 w-full min-w-[320px]",
                 // CAMBIO: Glassmorphism optimizado
                 "bg-white/40 backdrop-blur-xl border border-white/50 shadow-sm shadow-slate-200/20",
                 // Hover drop zone
                 isOver ? "bg-primary/5 border-primary/20 ring-2 ring-primary/10" : ""
             )}
         >
-            {/* Header de Columna */}
-            <div className="px-2 py-3 mb-2 flex justify-between items-center">
+            {/* Header de Columna - Fijo */}
+            <div className="px-2 py-3 mb-2 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-3">
                     <div className={cn("p-2 rounded-xl shadow-sm bg-white border border-slate-200", config.color)}>
                         <Icon className="h-4 w-4" />
@@ -118,8 +123,8 @@ const KanbanColumn = ({ id, title, count, children, statusConfig }) => {
                 </span>
             </div>
 
-            {/* Area de Drop */}
-            <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar px-1 pt-2 pb-4">
+            {/* Area de Drop - SCROLLABLE */}
+            <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar px-1 pt-2 pb-4 min-h-0">
                 {children}
             </div>
         </div>

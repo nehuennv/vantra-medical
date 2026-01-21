@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Plus, Check, Loader2 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -9,6 +9,8 @@ import { clientConfig } from "@/config/client";
 import { motion } from "framer-motion";
 import { parseKpiValue } from "@/lib/utils";
 import { useNavigate } from 'react-router-dom';
+
+
 
 export function DashboardPage() {
     const { identity, business, theme, mockData } = clientConfig;
@@ -57,9 +59,7 @@ export function DashboardPage() {
                     <h1 className="text-2xl font-bold tracking-tight text-slate-800">
                         {identity.greeting}, <span className="text-primary">{identity.name}</span>
                     </h1>
-                    <p className="text-sm text-slate-500 font-medium">
-                        Resumen operativo del consultorio.
-                    </p>
+
                 </div>
                 {/* ACCION PRINCIPAL */}
                 <div className="flex gap-2">
@@ -122,12 +122,12 @@ export function DashboardPage() {
             {/* SECCIÓN 3: OPERATIVA (2 Columnas: Feed y Agenda) */}
             <motion.div variants={itemVariants} className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
 
-                {/* Activity Feed */}
+                {/* Secretaria IA (Activity Feed) */}
                 <div className="xl:col-span-1 h-full min-h-[400px]">
                     <ActivityFeed logs={mockData.activityLogs} />
                 </div>
 
-                {/* Agenda Widget - NOW REAL DATA */}
+                {/* Agenda Express (Unified Timeline: Recent + Upcoming) */}
                 <div className="xl:col-span-2 h-full min-h-[400px]">
                     <AgendaWidget appointments={appointments} />
                 </div>

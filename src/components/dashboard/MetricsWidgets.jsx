@@ -1,13 +1,15 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from 'recharts';
 import { cn } from "@/lib/utils";
-import { MessageCircle, Users, BarChart2 } from "lucide-react";
+import { MessageCircle, Users, BarChart2, Activity, User, Clock, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
 
 // Wrapper Card Component
 const WidgetCard = ({ title, icon: Icon, children, className, iconColorClass = "text-slate-500", hoverBgClass = "group-hover:bg-slate-100", hoverTextClass = "group-hover:text-slate-700" }) => (
-    <div
-        className={cn("group bg-white/70 backdrop-blur-md rounded-[2rem] p-6 border border-white/60 shadow-sm flex flex-col transition-all duration-300 ease-in-out hover:-translate-y-[5px] hover:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.15)]", className)}
+    <SpotlightCard
+        className={cn("p-6 flex flex-col", className)}
     >
         <div className="flex items-center gap-2 mb-4">
             <div
@@ -25,7 +27,7 @@ const WidgetCard = ({ title, icon: Icon, children, className, iconColorClass = "
         <div className="flex-1 w-full min-h-[150px] flex flex-col justify-center">
             {children}
         </div>
-    </div>
+    </SpotlightCard>
 );
 
 export function SourcesWidget({ data }) {
@@ -188,6 +190,55 @@ export function DemandPeaksWidget({ data, themeColor }) {
                     </BarChart>
                 </ResponsiveContainer>
             </motion.div>
+        </WidgetCard>
+    );
+}
+
+export function RecentPatientsWidget({ appointments }) {
+    // This widget uses standard Appointment data but filters for "Seen" or creates a list of recent interactions.
+    // For now, mirroring "Recently Accessed Files" metaphor but for Patients.
+    const recentPatients = [
+        { id: 101, name: "Mariana López", action: "Consulta Finalizada", time: "15 min", color: "bg-emerald-100 text-emerald-600" },
+        { id: 102, name: "Carlos Díaz", action: "Historia Actualizada", time: "32 min", color: "bg-blue-100 text-blue-600" },
+        { id: 103, name: "Roberto Gómez", action: "Estudio Cargado", time: "1h", color: "bg-indigo-100 text-indigo-600" },
+        { id: 104, name: "Laura Chen", action: "Receta Enviada", time: "2h", color: "bg-purple-100 text-purple-600" },
+    ];
+
+    return (
+        <WidgetCard
+            title="Pacientes Recientes"
+            icon={User}
+            iconColorClass="text-primary"
+            hoverBgClass="group-hover:bg-primary/10"
+            hoverTextClass="group-hover:text-primary"
+        >
+            <div className="flex flex-col gap-3 mt-2 overflow-y-auto pr-1 max-h-[250px] custom-scrollbar">
+                {recentPatients.map((p, index) => (
+                    <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, x: -5 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="group/item flex items-center gap-3 p-3 rounded-2xl border border-slate-100 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
+                    >
+                        <div className={cn("h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0", p.color)}>
+                            {p.name.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-bold text-slate-800 truncate">{p.name}</h4>
+                            <p className="text-[10px] text-slate-500 truncate">{p.action}</p>
+                        </div>
+                        <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {p.time}
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+
+            <button className="mt-auto w-full py-2 text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center justify-center gap-1">
+                Ver database completa <ArrowRight className="h-3 w-3" />
+            </button>
         </WidgetCard>
     );
 }

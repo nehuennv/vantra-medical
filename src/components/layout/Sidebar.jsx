@@ -38,16 +38,16 @@ export function Sidebar() {
     }, []);
 
     return (
-        <aside className="w-20 lg:w-72 bg-white rounded-[2rem] border border-slate-200 h-full flex flex-col transition-all duration-300 relative z-20 shadow-lg shadow-slate-200/50">
+        <aside className="w-20 lg:w-72 h-full flex flex-col transition-all duration-300 relative z-20 bg-white/60 backdrop-blur-xl rounded-[2rem] border border-white/50 shadow-xl shadow-slate-200/50">
 
             {/* Logo Area */}
-            <div className="h-24 flex items-center justify-center lg:justify-start px-6 border-b border-slate-50 mb-2">
+            <div className="h-24 flex items-center justify-center lg:justify-start px-6 mb-2">
                 <div className="flex items-center gap-3.5 group cursor-pointer">
                     <div className="h-11 w-11 bg-primary rounded-[14px] flex items-center justify-center shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform duration-300 ring-4 ring-primary/10">
                         <Activity className="h-6 w-6 text-white" />
                     </div>
                     <div className="hidden lg:block">
-                        <h1 className="font-black text-xl tracking-tight text-slate-900 leading-none mb-0.5">Vantra<span className="text-primary">Med</span></h1>
+                        <h1 className="font-black text-xl tracking-tight text-slate-900 leading-none mb-0.5">Cardio<span className="text-primary">Med</span></h1>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Consultorio</p>
                     </div>
                 </div>
@@ -109,7 +109,7 @@ export function Sidebar() {
             </nav>
 
             {/* User Profile Footer */}
-            <div className="p-4 border-t border-slate-100">
+            <div className="p-4">
                 <button className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-slate-50 transition-colors group">
                     <div className="relative">
                         <div className="h-10 w-10 rounded-full bg-primary/10 border-2 border-white shadow-sm overflow-hidden">
